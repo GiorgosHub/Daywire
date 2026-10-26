@@ -140,6 +140,21 @@ try {
     assert(reg.includes("United States") || reg.includes("ΗΠΑ"), "US listed");
     assert(reg.includes("Χρειάζεται κλειδί") || reg.includes("Συνδεδεμένη"), "states shown");
   });
+  await check("motion shell: switching place with animation loads its feed; the wire marks now; compact bar after scroll", async () => {
+    await page.goto(BASE + "#/", { waitUntil: "load" }); await ready(page);
+    // the chip switch goes through the animated (View Transition) path; the feed must still arrive
+    const before = await page.textContent(".pb-name");
+    await page.click(".loc-chip:not([aria-current])");
+    await page.waitForFunction((b) => document.querySelector(".pb-name")?.textContent !== b && document.querySelector(".coverage"), before, { timeout: 15000 });
+    assert(await page.locator(".stage").count() === 1, "stage");
+    assert(await page.locator(".wire-nowline").count() === 1, "now line");
+    assert(!(await page.evaluate(() => document.documentElement.classList.contains("scrolled"))), "compact bar hidden at top");
+    await page.evaluate(() => scrollTo(0, 1600)); await page.waitForTimeout(700);
+    assert(await page.evaluate(() => document.documentElement.classList.contains("scrolled")), "compact bar shown after scroll");
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.click(".loc-chip:not([aria-current])");
+    await page.waitForFunction((b) => document.querySelector(".pb-name")?.textContent === b && document.querySelector(".coverage"), before, { timeout: 15000 });
+  });
   await check("no browser console errors", async () => { assert(errors.length === 0, errors.join(" | ")); });
   await ctx.close();
 

@@ -8,11 +8,14 @@ import { clock, getLang, LANGS, M, setLang, tx, type Lang } from "../i18n/index.
 import { wipe } from "../prefs.ts";
 import { removeLocation, rerender, S, saveLocation, savedEntry, switchTo, update, updateEntry } from "../state.ts";
 import { coverageBadge } from "./home.ts";
+import { mountGlobe, type GlobePoint } from "../fx/globe.ts";
+import { reducedMotion } from "../fx/loop.ts";
+import { FEATURED } from "../../domain/localities.ts";
 
-export function modal(id: string, title: string, body: (close: () => void) => (Node | null)[], opts: { wide?: boolean; onClose?: () => void } = {}): HTMLDialogElement {
+export function modal(id: string, title: string, body: (close: () => void) => (Node | null)[], opts: { wide?: boolean; onClose?: () => void; from?: DOMRect; cls?: string } = {}): HTMLDialogElement {
   document.getElementById(id)?.remove();
   const opener = document.activeElement as HTMLElement | null;
-  const dlg = h("dialog", { id, class: `dlg${opts.wide ? " wide" : ""}`, "aria-labelledby": `${id}-h` }) as HTMLDialogElement;
+  const dlg = h("dialog", { id, class: `dlg${opts.wide ? " wide" : ""}${opts.cls ? ` ${opts.cls}` : ""}`, "aria-labelledby": `${id}-h` }) as HTMLDialogElement;
   const close = () => dlg.close();
   dlg.addEventListener("close", () => { dlg.remove(); opts.onClose?.(); opener?.focus?.(); });
   dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
@@ -23,6 +26,12 @@ export function modal(id: string, title: string, body: (close: () => void) => (N
   );
   document.body.append(dlg);
   dlg.showModal();
+  // open out of the card that was clicked
+  if (opts.from && !reducedMotion() && innerWidth > 560) {
+    const d = dlg.getBoundingClientRect(), f = opts.from;
+    const ins = [f.top - d.top, d.right - f.right, d.bottom - f.bottom, f.left - d.left].map((v) => `${Math.max(0, v).toFixed(0)}px`).join(" ");
+    dlg.animate([{ clipPath: `inset(${ins} round 12px)`, opacity: 0.5 }, { clipPath: "inset(0 round 14px)", opacity: 1 }], { duration: 460, easing: "cubic-bezier(.2,.8,.2,1)" });
+  }
   return dlg;
 }
 
@@ -46,15 +55,28 @@ export function openLocations(): void {
 
   let close: () => void = () => {};
   const choose = (loc: GeoLocation) => { close(); switchTo(loc); };
+  const globeCanvas = h("canvas", { class: "globe", "aria-hidden": "true" }) as HTMLCanvasElement;
+  const globe = mountGlobe(globeCanvas);
+  const basePoints = (): GlobePoint[] => [
+    ...FEATURED.map((l) => ({ id: l.id, lat: l.lat, lon: l.lon, kind: "covered" as const })),
+    ...S.prefs.locations.map((l) => ({ id: l.location.id, lat: l.location.lat, lon: l.location.lon, kind: "saved" as const })),
+    ...(S.current ? [{ id: S.current.id, lat: S.current.lat, lon: S.current.lon, kind: "current" as const }] : []),
+  ];
+  const syncGlobe = () => {
+    globe.setPoints([...basePoints(), ...hits.map((x) => ({ id: x.location.id, lat: x.location.lat, lon: x.location.lon, kind: "result" as const }))]);
+    const f = hits[Math.max(active, 0)]?.location ?? S.current;
+    if (f) globe.focus(f.lat, f.lon, f.id);
+  };
 
   const option = (hit: Hit, i: number) => {
     const l = hit.location;
-    return h("li", { id: `loc-opt-${i}`, role: "option", class: "loc-opt", "aria-selected": i === active ? "true" : "false", onclick: () => choose(l) },
+    return h("li", { id: `loc-opt-${i}`, role: "option", class: "loc-opt", "aria-selected": i === active ? "true" : "false", onclick: () => choose(l), onpointerenter: () => globe.focus(l.lat, l.lon, l.id) },
       h("span", { class: "loc-main" }, h("strong", {}, tx(l.name)), h("span", { class: "muted" }, ` · ${placeLine(l)}`)),
       h("span", { class: "loc-meta" }, coverageBadge(hit.coverage.level), h("span", { class: "muted small" }, m.localTime(clock(Date.now(), l.tz)))),
     );
   };
   const drawHits = () => {
+    syncGlobe();
     clear(list);
     list.append(...hits.map(option));
     input.setAttribute("aria-expanded", hits.length ? "true" : "false");
@@ -108,15 +130,18 @@ export function openLocations(): void {
   };
   drawIdle();
 
+  syncGlobe();
   modal("dlg-locations", m.locationsTitle, (c) => {
     close = c;
     return [
+      h("div", { class: "globe-wrap" }, globeCanvas, h("p", { class: "globe-key", "aria-hidden": "true" },
+        h("span", { class: "gk gk-cov" }, m.withSources), h("span", { class: "gk gk-saved" }, m.yourLocations))),
       h("label", { class: "field" }, h("span", {}, m.findAPlace), h("div", { class: "search" }, icon("search"), input)),
       h("p", { id: "loc-hint", class: "muted small" }, m.locHint),
       status, list, idle,
       h("p", { class: "muted small attrib" }, m.geoAttribution),
     ];
-  }, { onClose: rerender });
+  }, { onClose: () => { globe.dispose(); rerender(); }, cls: "dlg-loc" });
   input.focus();
 }
 

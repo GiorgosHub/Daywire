@@ -15,6 +15,8 @@ export const S: {
   previousVisit?: number;
   /** Test clock: only honoured for fixture data, never for live data. */
   nowOverride?: number;
+  /** Where the last opened card was, so its detail can open out of it. */
+  lastRect?: DOMRect;
 } = {
   prefs: load(),
   feedState: "idle",

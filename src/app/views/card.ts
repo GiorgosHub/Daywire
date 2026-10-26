@@ -4,7 +4,10 @@ import type { Notice } from "../../domain/types.ts";
 import type { Row } from "../../domain/view.ts";
 import { h, icon } from "../dom.ts";
 import { dayClock, getLang, LANGS, M, rangeLabel, relative, tx } from "../i18n/index.ts";
+import { burst } from "../fx/motion.ts";
+import { reveal } from "../fx/reveal.ts";
 import { S, update } from "../state.ts";
+import { fieldApi } from "./hero.ts";
 import { severityChip, statusChip, statusText } from "./status-ui.ts";
 
 export function whereText(n: Notice): string {
@@ -53,12 +56,13 @@ export function savedToggle(n: Notice, compact = true): HTMLButtonElement {
     title: on ? m.saved : m.save,
     onclick: (e: Event) => {
       e.stopPropagation();
+      if (!on) { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2); }
       update({ savedNotices: on ? S.prefs.savedNotices.filter((x) => x !== n.id) : [...S.prefs.savedNotices, n.id] });
     },
   }, icon("bookmark"), compact ? null : h("span", {}, on ? m.saved : m.save));
 }
 
-export function card(r: Row, now: number): HTMLElement {
+export function card(r: Row, now: number, index = 0): HTMLElement {
   const m = M();
   const n = r.n;
   const when = rangeLabel(n.start, n.end, n.tz);
@@ -66,7 +70,12 @@ export function card(r: Row, now: number): HTMLElement {
   const headline = tx(n.headline);
   const untranslated = n.language !== getLang() && !n.headline[getLang()];
   const href = `#/n/${encodeURIComponent(n.id)}`;
-  return h("article", { class: `card cat-${n.category} ${st.cls}${r.st.unverified ? " unverified" : ""}${r.priority ? " prio" : ""}`, "data-id": n.id },
+  const field = fieldApi();
+  const el = h("article", {
+    class: `card cat-${n.category} ${st.cls}${r.st.unverified ? " unverified" : ""}${r.priority ? " prio" : ""}${n.severity ? ` sev-r${n.severity.rank}` : ""}`, "data-id": n.id,
+    onpointerenter: () => field?.highlight(n.id), onpointerleave: () => field?.highlight(null),
+    onclick: (e: Event) => { if ((e.target as Element).closest(".card-title a")) S.lastRect = el.getBoundingClientRect(); },
+  },
     h("div", { class: "card-top" },
       h("span", { class: "cat" }, icon(n.category, "ic ic-s"), m.cat[n.category]),
       statusChip(r, now),
@@ -94,4 +103,5 @@ export function card(r: Row, now: number): HTMLElement {
       h("a", { class: "src", href: n.sourceUrl, target: "_blank", rel: "noopener noreferrer" }, m.original, icon("external", "ic ic-xs"), h("span", { class: "sr" }, ` ${m.newTab}`)),
     ),
   );
+  return reveal(el, `card:${n.locationId}:${n.id}`, index);
 }

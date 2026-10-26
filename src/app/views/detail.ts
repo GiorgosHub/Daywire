@@ -92,5 +92,5 @@ export function openDetail(r: Row, now: number): void {
         try { await navigator.clipboard.writeText(location.href); b.lastChild!.textContent = m.copied; } catch { b.lastChild!.textContent = m.copyFailed; }
       } }, icon("link", "ic ic-s"), h("span", {}, m.copyLink)),
     ),
-  ], { wide: true, onClose: () => { if (location.hash.startsWith("#/n/")) history.replaceState(null, "", "#/"); } });
+  ], { wide: true, ...(S.lastRect ? { from: S.lastRect } : {}), onClose: () => { S.lastRect = undefined; if (location.hash.startsWith("#/n/")) history.replaceState(null, "", "#/"); } });
 }

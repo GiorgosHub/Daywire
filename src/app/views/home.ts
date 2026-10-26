@@ -6,6 +6,8 @@ import { h, icon } from "../dom.ts";
 import { clock, dayClock, M, num, relative, tx } from "../i18n/index.ts";
 import { filtersActive, isSaved, prefsHere, rerender, S, saveLocation, savedEntry, update, updateEntry } from "../state.ts";
 import { card } from "./card.ts";
+import { countTo } from "../fx/motion.ts";
+import { reveal } from "../fx/reveal.ts";
 import { openLocations, openPlaces } from "./dialogs.ts";
 
 const ORDER: Category[] = ["weather", "water", "roads", "transport", "power", "services", "emergency", "announcement"];
@@ -34,13 +36,35 @@ export function coverageBadge(level: Coverage["level"]): HTMLElement {
   return h("span", { class: `cov cov-${level}` }, h("span", { class: "cov-bars", "aria-hidden": "true" }, h("i"), h("i"), h("i")), M().covLevel[level]);
 }
 
+/** Eight segments, one per category, lit by its coverage state; the connected count in the middle. */
+export function coverageRing(c: Coverage): HTMLElement {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("class", "ring");
+  svg.setAttribute("aria-hidden", "true");
+  const seg = 360 / ORDER.length, gap = 6;
+  ORDER.forEach((cat, i) => {
+    const st = c.categories.find((x) => x.category === cat)?.state ?? "none";
+    const a0 = (i * seg + gap / 2 - 90) * Math.PI / 180, a1 = ((i + 1) * seg - gap / 2 - 90) * Math.PI / 180;
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", `M ${50 + 40 * Math.cos(a0)} ${50 + 40 * Math.sin(a0)} A 40 40 0 0 1 ${50 + 40 * Math.cos(a1)} ${50 + 40 * Math.sin(a1)}`);
+    p.setAttribute("class", `rs rs-${st}`);
+    p.setAttribute("pathLength", "1");
+    p.style.setProperty("--i", String(i));
+    svg.append(p);
+  });
+  const wrap = h("div", { class: "ring-wrap" }, svg, h("span", { class: "ring-n" }, h("strong", {}, num(c.connected)), h("span", {}, `/${ORDER.length}`)));
+  return wrap;
+}
+
 function coveragePanel(f: Feed): HTMLElement {
   const m = M();
   const byCat = new Map(f.coverage.categories.map((c) => [c.category, c]));
   const name = (id: string) => tx(f.sources.find((s) => s.id === id)?.name) || id;
   return h("section", { class: "coverage", "aria-labelledby": "cov-h" },
     h("div", { class: "cov-head" }, h("h2", { id: "cov-h" }, m.coverageTitle), coverageBadge(f.coverage.level)),
-    h("p", { class: "cov-lead" }, m.covLead[f.coverage.level](tx(f.location.name))),
+    h("div", { class: "cov-top" }, coverageRing(f.coverage), h("p", { class: "cov-lead" }, m.covLead[f.coverage.level](tx(f.location.name)))),
     h("ul", { class: "cov-list" }, ORDER.map((c) => {
       const cc = byCat.get(c)!;
       return h("li", { class: `cov-${cc.state}` },
@@ -59,14 +83,13 @@ function overview(sec: ReturnType<typeof sections>, all: Row[], f: Feed): HTMLEl
   const places = (entry?.placeIds ?? []).map((id) => locality?.places.find((p) => p.id === id)).filter(Boolean).map((p) => tx(p!.name));
   const scopeLabel = [tx(loc.name), ...places, ...(entry?.terms ?? [])].join(" · ");
   const newCount = S.previousVisit ? all.filter((r) => Date.parse(r.n.firstSeenAt ?? r.n.updatedAt ?? r.n.publishedAt ?? "") > S.previousVisit!).length : 0;
-  const n = (v: number, label: string) => h("div", { class: "ov-item" }, h("strong", { class: "ov-n" }, num(v)), h("span", {}, label));
+  const n = (v: number, label: string, k: string) => { const el = h("strong", { class: "ov-n" }); countTo(el, `ov:${loc.id}:${k}`, v, num); return h("div", { class: "ov-item" }, el, h("span", {}, label)); };
   return h("section", { class: "overview", "aria-label": m.overview },
     h("div", { class: "ov-scope" },
       h("span", { class: "ov-for" }, `${m.forPlace} `, h("strong", {}, scopeLabel)),
       isSaved() ? h("button", { type: "button", class: "link", onclick: () => openPlaces() }, m.change) : null,
     ),
-    h("div", { class: "ov-cov" }, coverageBadge(f.coverage.level)),
-    h("div", { class: "ov-items" }, n(sec.counts.inForce, m.ovInForce), n(sec.counts.next7, m.ovNext7), n(sec.counts.endedRecently, m.ovEnded)),
+    h("div", { class: "ov-items" }, n(sec.counts.inForce, m.ovInForce, "now"), n(sec.counts.next7, m.ovNext7, "next"), n(sec.counts.endedRecently, m.ovEnded, "ended")),
     newCount ? h("p", { class: "ov-new" }, m.newSince(newCount, dayClock(S.previousVisit!, loc.tz))) : null,
     h("p", { class: "ov-rule" }, m.ovRule),
   );
@@ -128,12 +151,13 @@ function toolbar(): HTMLElement {
 function section(id: string, title: string, rows: Row[], now: number, opts: { lead?: string; collapsed?: boolean; limit?: number } = {}): HTMLElement | null {
   if (!rows.length) return null;
   const limit = opts.limit ?? rows.length;
-  const list = h("div", { class: "cards" }, rows.slice(0, limit).map((r) => card(r, now)));
+  const list = h("div", { class: "cards" }, rows.slice(0, limit).map((r, i) => card(r, now, i)));
   const body = [opts.lead ? h("p", { class: "lead" }, opts.lead) : null, list,
     rows.length > limit ? h("button", { type: "button", class: "btn ghost more", onclick: (e: Event) => { (e.currentTarget as HTMLElement).replaceWith(...rows.slice(limit).map((r) => card(r, now))); } }, M().showMore(rows.length - limit)) : null];
-  const head = h("h2", { id: `${id}-h` }, title, h("span", { class: "count" }, num(rows.length)));
-  if (opts.collapsed) return h("section", { class: "sec", id, "aria-labelledby": `${id}-h` }, h("details", {}, h("summary", {}, head, icon("chevron", "ic chev")), ...body));
-  return h("section", { class: "sec", id, "aria-labelledby": `${id}-h` }, head, ...body);
+  const head = h("h2", { id: `${id}-h`, class: "sec-head" }, h("span", { class: "sh-t" }, title), h("span", { class: "count" }, num(rows.length)), h("span", { class: "sec-line", "aria-hidden": "true" }));
+  const key = `sec:${S.current?.id}:${id}`;
+  if (opts.collapsed) return reveal(h("section", { class: "sec", id, "aria-labelledby": `${id}-h` }, h("details", {}, h("summary", {}, head, icon("chevron", "ic chev")), ...body)), key);
+  return reveal(h("section", { class: "sec", id, "aria-labelledby": `${id}-h` }, head, ...body), key);
 }
 
 /** For a location without connected sources: what we know, what is missing, and why. Never an empty feed. */
@@ -198,7 +222,7 @@ export function feedBody(all: Row[], now: number): HTMLElement {
     mainCol.append(h("section", { class: "sec results", id: "s-results", tabindex: "-1", "aria-live": "polite" },
       h("h2", {}, m.results, h("span", { class: "count" }, num(res.length)),
         h("button", { type: "button", class: "link", onclick: () => { S.filters = { q: "", categories: [], time: "all", publisher: "", mineOnly: false, savedOnly: false }; rerender(); } }, m.clearFilters)),
-      res.length ? h("div", { class: "cards" }, res.map((r) => card(r, now)))
+      res.length ? h("div", { class: "cards" }, res.map((r, i) => card(r, now, i)))
         : h("div", { class: "state empty" }, h("p", {}, S.filters.q ? m.noResultsFor(S.filters.q) : m.noResults, " ", m.searchScope))));
     return out;
   }

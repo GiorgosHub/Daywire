@@ -64,11 +64,21 @@ src/domain/     model (zod), localities, Greek text, time zones, extraction, sta
 src/sources/    registry (coverage, categories, config), HTTP, RSS/HTML helpers, one adapter per source
 src/server/     ingestion (isolation, shared fetch cache), coverage, geocoder, store
 src/app/        browser UI; i18n/ holds the message catalogs and zone-aware formatting
+src/app/fx/     motion: the WebGL2 city field, the globe, reveals, counters, the circle place switch
 functions/      Vercel functions: /api/feed, /api/places, /api/sources
 tests/          unit tests + real captured fixtures
 e2e/            Playwright journeys
 docs/           sources, data model and rules, ADR-001 (architecture), ADR-002 (global model)
 ```
+
+## Design and motion
+The hero sits on a city at night drawn live in WebGL2 (`src/app/fx/cityfield.ts`). It is an abstract city, not a
+map, and the page says so. Its only lights are the notices that are in force or due today, coloured by the issuer's
+severity, and its light follows the real sun at that place (computed in `src/domain/sun.ts`). "Today" is drawn as a
+24-hour wire in the place's own time zone, with daylight from sunrise to sunset and a line for now. The page
+content is a paper sheet laid over the city. Places switch through an opening circle (View Transitions), the
+location picker shows a globe, and cards, sections and numbers settle in as they appear. Without WebGL there is a
+quiet CSS sky; with reduced motion everything is still and complete.
 
 ## Known limits
 - **Freshness depends on traffic.** Sources are read when a location is opened, at most once per 5-minute CDN window per location. There is no scheduled job.
