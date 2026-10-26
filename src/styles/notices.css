@@ -40,14 +40,13 @@
 /* in force: the line fills from the start to now, and "now" pulses on it */
 .cw-line.strip { width: 4px; margin-right: 11px; background: var(--surface-2); }
 .strip-fill { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--k) * 100%); border-radius: inherit; background: linear-gradient(rgb(224 115 27 / 0.3), var(--st-active-mark)); }
-.strip-now { position: absolute; left: 50%; top: calc(var(--k) * 100%); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--st-active-mark); border: 2px solid var(--paper); animation: beat-o 2.4s ease-out infinite; }
+.strip-now { position: absolute; left: 50%; top: calc(var(--k) * 100%); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--st-active-mark); border: 2px solid var(--paper); }
 .card.sev-r4 .strip-fill { background: linear-gradient(rgb(210 54 43 / 0.3), var(--sev-red-mark)); } .card.sev-r4 .strip-now { background: var(--sev-red-mark); }
 .card.sev-r2 .strip-fill { background: linear-gradient(rgb(226 188 44 / 0.3), var(--sev-yellow-mark)); } .card.sev-r2 .strip-now { background: var(--sev-yellow-mark); }
-html.js .card.rv.in:not(.rv-done) .strip-fill { animation: strip-grow 1400ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms + 250ms); }
-html.js .card.rv.in:not(.rv-done) .strip-now { animation: strip-run 1400ms var(--ease-out) both, beat-o 2.4s ease-out 1.7s infinite; animation-delay: calc(var(--i, 0) * 70ms + 250ms), 1.7s; }
-@keyframes strip-grow { from { height: 0; } }
+html.js .card.rv.in:not(.rv-done) .strip-fill { animation: strip-grow 1400ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms + 250ms); transform-origin: top; }
+html.js .card.rv.in:not(.rv-done) .strip-now { animation: strip-run 1400ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 70ms + 250ms); }
+@keyframes strip-grow { from { transform: scaleY(0); } }
 @keyframes strip-run { from { top: 0; } }
-@keyframes beat-o { 0% { box-shadow: 0 0 0 0 rgb(224 115 27 / 0.5); } 70%, 100% { box-shadow: 0 0 0 8px rgb(224 115 27 / 0); } }
 
 @media (max-width: 560px) {
   .card { grid-template-columns: 62px minmax(0, 1fr); gap: 0 14px; padding: 18px 0 16px; }

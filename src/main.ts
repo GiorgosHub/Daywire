@@ -17,7 +17,7 @@ import { openDetail } from "./app/views/detail.ts";
 import { openLocations, openPrefs } from "./app/views/dialogs.ts";
 import { feedField, fieldApi, hero, liveClock, mountStage, startClocks } from "./app/views/hero.ts";
 import { banners, feedBody } from "./app/views/home.ts";
-import { railFor, railUpdate } from "./app/views/rail.ts";
+import { railFor, railMeasure, railReset, railUpdate, type RailLayout } from "./app/views/rail.ts";
 import { sourcesPage } from "./app/views/sources.ts";
 
 const app = document.getElementById("app")!;
@@ -27,7 +27,8 @@ const stage = h("div", { class: "stage", "aria-hidden": "true" }, h("div", { cla
 const bar = h("div", { class: "wrap top-in" });
 const heroSlot = h("div", { class: "hero-slot" });
 const top = h("header", { class: "top" }, bar, heroSlot);
-const shell = h("div", { class: "shell" }, stage, top);
+const veil = h("div", { class: "veil", "aria-hidden": "true" });
+const shell = h("div", { class: "shell" }, stage, top, veil);
 const mainEl = h("main", { id: "main", class: "wrap main", tabindex: "-1" });
 const footSlot = h("div");
 const tickSlot = h("div", { class: "tick-slot" });
@@ -119,7 +120,7 @@ function render(): void {
     const onSources = route.startsWith("/sources");
     if (onSources) mainEl.append(sourcesPage());
     else mainEl.append(feedBody(all, t0));
-    clear(railSlot); rail = onSources ? null : railFor(mainEl); if (rail) railSlot.append(rail);
+    clear(railSlot); rail = onSources ? null : railFor(mainEl); if (rail) railSlot.append(rail); railReset();
     clear(footSlot); footSlot.append(footer());
     feedField(S.feed, all, t0);
     measure();
@@ -188,14 +189,26 @@ async function locationFromLink(): Promise<GeoLocation | undefined> {
 }
 
 // ——— scroll: pin the city, slide the sheet over it, hand over to the compact bar ———
-let heroH = 0, pinStart = 0, lastY = -1, ticking = false;
+let heroH = 0, pinStart = 0, sheetEnd = 0, lastY = -1, lastP = -1, ticking = false;
+let railLayout: RailLayout | null = null;
+const flags = { scrolled: false, away: false, railOff: false };
+/** All layout reads happen here, once per layout change (render, resize, fonts), never during scroll. */
 function measure(): void {
   heroH = shell.offsetHeight;
   pinStart = Math.max(0, heroH - innerHeight);
+  sheetEnd = sheet.offsetTop + sheet.offsetHeight;
   // a hero taller than the window scrolls until its bottom shows, then holds
   shell.style.setProperty("--pin-top", `${-pinStart}px`);
+  railLayout = railMeasure(rail);
+  lastP = -1;
   onScroll();
 }
+function setFlag(name: keyof typeof flags, cls: string, on: boolean): void {
+  if (flags[name] === on) return;
+  flags[name] = on;
+  document.documentElement.classList.toggle(cls, on);
+}
+/** Scroll writes only: transforms and opacity on a handful of elements, and classes when they change. */
 function onScroll(): void {
   if (ticking) return;
   ticking = true;
@@ -203,19 +216,26 @@ function onScroll(): void {
     ticking = false;
     const y = scrollY;
     const p = heroH > pinStart ? Math.min(1, Math.max(0, (y - pinStart) / (heroH - pinStart))) : 0;
-    shell.style.setProperty("--p", p.toFixed(3));
-    fieldApi()?.setActive(p < 0.995);
-    const root = document.documentElement;
+    if (Math.abs(p - lastP) > 0.001) {
+      lastP = p;
+      // the city leans back and dims as the paper covers it; the board drifts up a little faster than the paper
+      stage.style.transform = p ? `scale(${(1 + p * 0.07).toFixed(4)})` : "";
+      veil.style.opacity = (p * 0.75).toFixed(3);
+      const board = heroSlot.querySelector<HTMLElement>(".board"), under = heroSlot.querySelector<HTMLElement>(".hero-under");
+      if (board) board.style.transform = p ? `translate3d(0, ${(-48 * p).toFixed(1)}px, 0)` : "";
+      if (under) under.style.transform = p ? `translate3d(0, ${(-24 * p).toFixed(1)}px, 0)` : "";
+      fieldApi()?.setActive(p < 0.995);
+    }
     const scrolled = y > heroH - 72;
-    root.classList.toggle("scrolled", scrolled);
+    setFlag("scrolled", "scrolled", scrolled);
     // the first reading (e.g. a reload half-way down) shows the bar; after that, down hides it and up brings it back
-    if (!scrolled || lastY < 0) root.classList.remove("bar-away");
-    else if (y > lastY + 6) root.classList.add("bar-away");
-    else if (y < lastY - 6) root.classList.remove("bar-away");
+    if (!scrolled || lastY < 0) setFlag("away", "bar-away", false);
+    else if (y > lastY + 6) setFlag("away", "bar-away", true);
+    else if (y < lastY - 6) setFlag("away", "bar-away", false);
     lastY = y;
     // the rail steps aside when the page's end (the footer) comes up
-    root.classList.toggle("rail-off", sheet.getBoundingClientRect().bottom < innerHeight * 0.75);
-    railUpdate(rail, mainEl);
+    setFlag("railOff", "rail-off", sheetEnd - y < innerHeight * 0.75);
+    railUpdate(rail, railLayout, y);
   });
 }
 
@@ -228,7 +248,8 @@ function installShell(): void {
   addEventListener("scroll", onScroll, { passive: true });
   let narrow = innerWidth < 760;
   addEventListener("resize", () => { measure(); if ((innerWidth < 760) !== narrow) { narrow = !narrow; render(); } });
-  if (typeof ResizeObserver !== "undefined") new ResizeObserver(measure).observe(shell);
+  if (typeof ResizeObserver !== "undefined") { const ro = new ResizeObserver(() => measure()); ro.observe(shell); ro.observe(sheet); }
+  document.fonts?.ready.then(() => measure());
   // a touch on the city sends a ring through its streets
   shell.addEventListener("pointerdown", (e) => { if (!(e.target as Element).closest("a,button,input,select,label")) fieldApi()?.ripple(e.clientX, e.clientY); });
 }

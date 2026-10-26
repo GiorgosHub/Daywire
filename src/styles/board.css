@@ -135,7 +135,7 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--now); outline-offset: 0
   border-top: 1px solid #000;
 }
 .board .tk-tag { align-self: stretch; display: inline-flex; align-items: center; gap: 9px; padding: 0 18px 0 30px; flex: none; font-size: 12px; font-weight: 650; color: var(--flap-dim); background: #080808; box-shadow: 16px 0 16px -4px #060607; position: relative; z-index: 1; }
-.board .tk-live { width: 8px; height: 8px; border-radius: 50%; background: var(--led); box-shadow: 0 0 10px var(--led); animation: beat 2.2s ease-out infinite; }
+.board .tk-live { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--led); box-shadow: 0 0 10px var(--led); }
 .board .tk-view { flex: 1; min-width: 0; overflow: hidden; }
 /* dot-matrix: the moving text is seen through a grid of round LEDs */
 .board .tk-track {

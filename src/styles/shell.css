@@ -28,13 +28,13 @@
 }
 
 /* ——— shell + stage ——— */
-/* The city holds still (sticky) while the sheet slides over it. --p goes 0 → 1 as the sheet covers it (set in main.ts):
+/* The city holds still (sticky) while the sheet slides over it. As the sheet covers it (main.ts, scroll writes only):
    the copy drifts up, the city leans back and dims. A hero taller than the window first scrolls to its bottom. */
-.shell { position: sticky; top: var(--pin-top, 0px); z-index: 0; isolation: isolate; background: var(--night-950); color: var(--on-night); overflow: hidden; --p: 0; }
-.shell::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--night-950); opacity: calc(var(--p) * 0.75); }
+.shell { position: sticky; top: var(--pin-top, 0px); z-index: 0; isolation: isolate; background: var(--night-950); color: var(--on-night); overflow: hidden; }
+.veil { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--night-950); opacity: 0; will-change: opacity; }
 /* film grain (as on the Giannotas site) is drawn inside the city field's shader, so it costs nothing extra;
    without WebGL the CSS sky below carries a static grain of its own. */
-.stage { position: absolute; inset: 0; z-index: -1; pointer-events: none; scale: calc(1 + var(--p) * 0.07); transform-origin: 60% 30%; }
+.stage { position: absolute; inset: 0; z-index: -1; pointer-events: none; transform-origin: 60% 30%; will-change: transform; }
 .stage .cf { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: auto; }
 /* without WebGL: a slow, quiet sky of gradients and a street grid, clearly decorative */
 .stage-css {
@@ -88,7 +88,6 @@
 .place-btn {
   display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; margin-right: 6px;
   border: 1px solid var(--glass-line); border-radius: 999px; background: rgb(255 255 255 / 0.06);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
   color: var(--on-night); font-size: 14px; font-weight: 600;
   transition: background var(--t) var(--ease), border-color var(--t) var(--ease);
 }
@@ -111,17 +110,20 @@
 
 /* ——— hero: the city board, then one line about DAYWIRE ——— */
 .hero { position: relative; padding-top: 18px; padding-bottom: 76px; }
-.hero-under { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 22px; translate: 0 calc(var(--p) * -24px); }
+.hero-under { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 22px; }
 .hero .sub { margin: 0; color: var(--on-night-2); font-size: 15px; max-width: 34em; }
-.board { translate: 0 calc(var(--p) * -48px); }
+.board { will-change: transform; }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 .fresh { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--on-night-2); text-decoration: none; font-variant-numeric: tabular-nums; }
 .fresh:hover { color: #fff; }
-.fresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--now); box-shadow: 0 0 0 0 rgb(247 244 236 / 0.6); animation: beat 2.8s ease-out infinite; flex: none; }
+.fresh-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--now); flex: none; }
+/* pulses are a ring that scales and fades (transform and opacity only, so the compositor does it without repaints) */
+.fresh-dot::after, .board .tk-live::after, .strip-now::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: ring 2.6s ease-out infinite; }
+.fresh.warn .fresh-dot::after, .fresh.none .fresh-dot::after { display: none; }
 .fresh.warn .fresh-dot { background: var(--warn-on-dark); animation: none; }
 .fresh.none .fresh-dot { background: transparent; border: 1.5px solid var(--on-night-2); animation: none; }
-@keyframes beat { 0% { box-shadow: 0 0 0 0 var(--now-glow); } 70%, 100% { box-shadow: 0 0 0 9px rgb(247 244 236 / 0); } }
+@keyframes ring { from { transform: scale(1); opacity: 0.55; } 70%, to { transform: scale(3.2); opacity: 0; } }
 .loc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .loc-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgb(255 255 255 / 0.04); color: var(--on-night-2); font-size: 13px; font-weight: 600; transition: all var(--t) var(--ease); }
 .loc-chip:hover { color: #fff; border-color: rgb(255 255 255 / 0.3); }
@@ -137,7 +139,7 @@
 /* ——— compact bar after the hero ——— */
 .compact {
   position: fixed; top: 0; left: 0; right: 0; z-index: 30; transform: translateY(-110%); pointer-events: none;
-  background: rgb(18 18 19 / 0.82); -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  background: rgb(18 18 19 / 0.96);
   border-bottom: 1px solid var(--glass-line); color: var(--on-night);
   transition: transform 420ms var(--ease-out);
 }
@@ -177,6 +179,8 @@ html.js .sec.rv { transform: none; }
 html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 
 .sec-head { flex-wrap: wrap; }
+/* sections far below the fold are not laid out or painted until they come near (the browser keeps their size) */
+.main > .feed .sec { content-visibility: auto; contain-intrinsic-size: auto 520px; }
 .sec h2.sec-head { align-items: center; }
 .sec-line { flex: 1 1 40px; height: 1px; min-width: 40px; background: linear-gradient(90deg, var(--line-2), transparent); transform-origin: 0 50%; transform: scaleX(0); transition: transform 1200ms var(--ease-out) 200ms; }
 .sec.in .sec-line, .sec:not(.rv) .sec-line { transform: none; }
@@ -271,7 +275,7 @@ html[data-vt] ::view-transition-new(root) { z-index: 2; }
   .compact { transition: none; }
   .tk-view { overflow-x: auto; -webkit-mask: none; mask: none; }
   .tk-track { animation: none; }
-  .stage, .board, .hero-under { scale: none; translate: none; }
+  .stage, .board, .hero-under { transform: none !important; }
 }
 
 @media print {
