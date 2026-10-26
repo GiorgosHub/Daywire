@@ -85,6 +85,8 @@ void main(){
   col += glow;
   col *= .72 + .28*smoothstep(1.25, .15, length((uv - vec2(.72, .62)) * vec2(1., 1.5)));
   col = mix(col, vec3(.047,.102,.18), smoothstep(.25, 0., uv.y) * .55);
+  // film grain, fresh every frame
+  col += (h21(fc + fract(uT * 7.3) * 113.) - .5) * .035;
   o = vec4(col, 1.);
 }`;
 

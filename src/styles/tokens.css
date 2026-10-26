@@ -1,4 +1,4 @@
-/* DAYWIRE tokens. Navy is the city at night (header and hero only); off-white paper is the day you read on.
+/* DAYWIRE tokens. Navy is the city at night (header and hero only); a cool concrete paper is the day you read on.
    Lime marks "now" and focus, nothing else. Status colours appear only on status. */
 /* One variable family (Inter, OFL), weights 100–900: the headline's weight is animated when the city switches on. */
 @font-face { font-family: "Inter"; src: url("/fonts/Inter-var.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
@@ -12,11 +12,11 @@
   --on-navy-2: #A9B6C6;
   --navy-line: rgb(255 255 255 / 0.12);
 
-  --paper: #F5F1E8;
-  --surface: #FFFDF8;
-  --surface-2: #EEE8DC;
-  --line: #DED6C7;
-  --line-2: #C9BEAB;
+  --paper: #E9ECE7;
+  --surface: #F7F8F5;
+  --surface-2: #DFE3DC;
+  --line: #CFD5CC;
+  --line-2: #B3BBB0;
   --ink: #152030;
   --slate: #384657;
   --muted: #5A6676;

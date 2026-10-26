@@ -4,8 +4,13 @@ DAYWIRE shows a city's day from its official sources. The design has one job: le
 disrupted today, and trust it. Every moving thing on the page is real data or answers something you did. Nothing is
 there to fill space.
 
-**The night and the paper.** The hero is the city at night, drawn live. The page you read is a paper sheet laid over
-it. Lime marks "now" and focus, and nothing else.
+**The city board.** The hero is a split-flap departure board for your place. It sits in front of the city at night,
+which is drawn live. The vernacular of public real-time information (station boards, LED strips, timetables) is the
+design language. The page you read is a sheet of cool concrete-grey paper laid over the city, and its notices are
+set as a timetable.
+
+**Lime marks "now" and focus, and nothing else.** It is deliberately not yellow, orange or red, because those belong
+to the issuers' warning levels.
 
 ## Tokens
 
@@ -17,7 +22,8 @@ night/motion layer.
 | Role | Token | Value | Use |
 |---|---|---|---|
 | Night | `--navy-950` / `--navy-900` | #070F1C / #0C1A2E | hero, ticker, footer, compact bar |
-| Paper | `--paper` / `--surface` | #F5F1E8 / #FFFDF8 | the sheet, cards, panels |
+| Paper (concrete) | `--paper` / `--surface` | #E9ECE7 / #F7F8F5 | the sheet, panels |
+| Board | `--board`, `--flap-top*`, `--flap-bot*`, `--flap-ink`, `--flap-dim`, `--led` | #0B0C0E … | the split-flap board, the ticket, the footer mark |
 | Ink | `--ink` / `--slate` / `--muted` | #152030 / #384657 / #5A6676 | text on paper, from strong to quiet |
 | Now | `--lime` | #C8F04B | the current time, the live pulse, focus on the night |
 | Status | `--st-{active,upcoming,ended,stale}-{ink,bg,mark}` | — | status chips and marks only, always with words |
@@ -65,16 +71,20 @@ Each motion says something true. With *reduce motion*, every one of them is off 
 
 | Motion | What it means | Where | Inspired by |
 |---|---|---|---|
+| **The board** | Every character is a flap that turns through the alphabet to its new value; only changed cells move. The title flips in first, then the rows. The clock flips with the place's minutes. While loading, the flaps spin. | `flap.ts`, `board.ts` | station boards |
+| Ticket | Opening a notice flips its board row in, close up. | `board.ts` `ticketFor` | — |
+| Flap counters | The overview's numbers turn only when they changed. | `flap.ts` `flapNumber` | — |
+| New since last visit | That row's tile blinks four times. | `.br.fresh` | a board announcing a change |
+| Footer mark | DAYWIRE on flaps; pointing at it shuffles them. | `main.ts` `footer` | — |
 | **Switch-on** | A scanner crosses the dark city and the streets light behind it. Today's notices then come on one by one, and the headline goes from thin to full weight. | `cityfield.ts` `boot()`, `.title` `ignite` | Giannotas' sign and x-ray scan |
 | City lights | Each light is a notice in force or due today, in its severity or category colour. With none, there are no lights. | `cityfield.ts` | — |
 | Daylight | The field's light follows the real sun at that place; the wire shades sunrise to sunset. | `sun.ts`, `wire.ts` | — |
-| **The wire (ticker)** | Today's notices, running like an agency wire. Every item is a link; it pauses on hover and focus. | `ticker.ts` | teleia's marquee |
+| **The wire (LED strip)** | Today's notices on a dot-matrix strip under the board. Every item is a link; it pauses on hover and focus (and drops the dot mask so it reads clearly). | `ticker.ts`, `.board .ticker` | teleia's marquee |
 | **Pinned city** | The city holds while the paper slides over it, dimming and leaning back (`--p`). | `main.ts` `measure/onScroll` | teleia's pinned scenes |
 | Compact bar | Takes over once the city is covered. It hides while you scroll down and returns on the way up. | `main.ts`, `.compact` | Giannotas' header |
-| **Live strip** | On a notice in force with a stated start and end, it shows how much of that time has passed, up to now. It fills from the start the first time you see it. | `card.ts` `liveStrip` | — |
+| **Live strip** | In the timetable's time column, the line from start to end fills to now on a notice in force. It fills from the start the first time you see it. | `card.ts` `timeCol` | — |
 | **Rail** | The page's sections as stops on a wire (≥1360px). A pulse sits at your reading position, and each stop is a button. | `rail.ts` | teleia's travelling full stop |
 | Now line | "Now" on today's 24-hour wire. | `wire.ts` | — |
-| Circle swap | A new place opens from where you clicked (View Transitions). | `motion.ts` `circleSwap` | — |
 | Detail from card | The notice opens out of the card you clicked. | `dialogs.ts` `modal({from})` | — |
 | Counters | Numbers count from what you last saw to what is true now. | `motion.ts` `countTo` | — |
 | Save sparks | Confirms that a notice was saved. | `motion.ts` `burst` | — |
@@ -83,7 +93,8 @@ Each motion says something true. With *reduce motion*, every one of them is off 
 
 | Component | Variants | States | Accessibility |
 |---|---|---|---|
-| Card (`.card`) | by status class (`st-*`), severity (`sev-r1..4`), `prio`, `unverified` (dashed) | default, hover (light follows the pointer), saved | title link covers the card; the status is in words; the strip is `aria-hidden` (the words "ends in" carry it) |
+| Board (`.board`) | wide (7 rows, from/until/what/where/status/day track), mid (smaller cells, no "where"), narrow (5 rows, from-time only, the track under each row) | rows: in force / later / ended / message / empty / loading / fresh | `h1` carries the title text; flaps are `aria-hidden`; each filled row is a link with a full name; messages are a `note` |
+| Timetable entry (`.card`) | by status class (`st-*`), severity (`sev-r1..4`), `prio`, `unverified` (dashed) | default, hover (light follows the pointer), saved | title link covers the card; the status is in words; the strip is `aria-hidden` (the words "ends in" carry it) |
 | Ticker (`.ticker`) | moving, `quiet` (nothing today: static text), none (no coverage) | paused on hover/focus | `section` with a label; the looping copies are `aria-hidden` and out of the tab order |
 | Rail (`.rail`) | wide screens only | stop `on` / `past`; label on hover or focus | `nav` with a label; the stops are buttons |
 | Wire (`.wire`) | rows, empty, loading (scan), local time only (no coverage) | row hover lights its notice's lights | real links; the time axis is `aria-hidden` |
@@ -98,6 +109,12 @@ Each motion says something true. With *reduce motion*, every one of them is off 
 | Keep severity in the issuer's words and colours | Rank or recolour official warnings ourselves |
 | Give every motion a reduced-motion state that is complete | Hide content behind an animation that may not run |
 | Use one type family; let weight and size do the work | Put all-caps labels over every heading |
+
+## Performance
+
+The board has about 400 cells. At rest it is flat: only the two moving halves of a turning cell get a compositing
+layer (`will-change` is applied while turning). One frame loop drives every turning cell and stops when none move.
+The film grain is drawn inside the WebGL shader rather than as a blended CSS layer, and the no-WebGL sky is static.
 
 ## Audit (October 2026)
 

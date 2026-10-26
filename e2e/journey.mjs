@@ -25,7 +25,7 @@ const BASE = "http://localhost:4190/";
 const browser = await chromium.launch();
 const errors = [];
 const watch = (p) => { p.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); }); p.on("pageerror", (e) => errors.push(e.message)); };
-const ready = (p) => p.waitForFunction(() => !document.querySelector(".skeleton") && !document.querySelector(".wire-loading"), null, { timeout: 15000 });
+const ready = (p) => p.waitForFunction(() => !document.querySelector(".skeleton") && !document.querySelector(".br.loading"), null, { timeout: 15000 });
 
 try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "el-GR", timezoneId: "Europe/Athens" });
@@ -107,7 +107,7 @@ try {
     await page.waitForFunction(() => document.querySelector(".pb-name")?.textContent?.includes("Λονδίνο") && document.querySelector(".coverage"), null, { timeout: 15000 });
     assert((await page.textContent(".coverage")).includes("Μερική κάλυψη"), "partial");
     assert((await page.locator(".card.cat-transport").count()) === 3, "three TfL lines with problems");
-    assert((await page.textContent(".wire-now")).includes("GMT"), "London's zone is named for a viewer in Athens");
+    assert((await page.textContent(".bd-zone")).includes("GMT"), "London's zone is named for a viewer in Athens");
     await page.click(".banner.info .btn");
     await page.reload({ waitUntil: "load" }); await ready(page);
     const chips = await page.locator(".loc-chip").allTextContents();
@@ -122,6 +122,9 @@ try {
     assert(txt.includes("δεν έχει ακόμα συνδεδεμένες πηγές") && txt.includes("δεν μπορεί να σου πει αν συμβαίνει κάτι"), "honest no-coverage text");
     assert(!txt.includes("Καμία ενεργή"), "no calm claim");
     assert(!(await page.isVisible(".card")), "no cards");
+    const note = await page.getAttribute(".board .br-link[role=note]", "aria-label");
+    assert(note && note.includes("Καμία συνδεδεμένη πηγή"), `board says there is no source: ${note}`);
+    assert((await page.locator(".board a.br-link[href]").count()) === 0, "no rows on the board");
   });
   await check("English interface; official titles stay in their language", async () => {
     await page.goto(BASE, { waitUntil: "load" }); await ready(page);
@@ -148,7 +151,10 @@ try {
     await page.click(".loc-chip:not([aria-current])");
     await page.waitForFunction((b) => document.querySelector(".pb-name")?.textContent !== b && document.querySelector(".coverage"), before, { timeout: 15000 });
     assert(await page.locator(".stage").count() === 1, "stage");
-    assert(await page.locator(".wire-nowline").count() === 1, "now line");
+    assert(await page.locator(".board .br-now").count() >= 1, "now on the board's day tracks");
+    // the board: every filled row is a link to a notice on the page, with a full accessible name
+    const rowsB = await page.evaluate(() => [...document.querySelectorAll(".board a.br-link[href]")].map((a) => [a.getAttribute("href"), a.getAttribute("aria-label")]));
+    assert(rowsB.length > 0 && rowsB.every(([h, l]) => h.startsWith("#/n/") && l && l.length > 10), JSON.stringify(rowsB));
     assert(!(await page.evaluate(() => document.documentElement.classList.contains("scrolled"))), "compact bar hidden at top");
     await page.evaluate(() => scrollTo(0, 1600)); await page.waitForTimeout(700);
     assert(await page.evaluate(() => document.documentElement.classList.contains("scrolled")), "compact bar shown after scroll");

@@ -3,7 +3,7 @@ import { areaNames } from "../../domain/build.ts";
 import type { Notice } from "../../domain/types.ts";
 import type { Row } from "../../domain/view.ts";
 import { h, icon } from "../dom.ts";
-import { dayClock, getLang, LANGS, M, rangeLabel, relative, tx } from "../i18n/index.ts";
+import { clock, dayClock, dayLabel, getLang, LANGS, localDay, M, rangeLabel, relative, tx } from "../i18n/index.ts";
 import { burst } from "../fx/motion.ts";
 import { reveal } from "../fx/reveal.ts";
 import { S, update } from "../state.ts";
@@ -62,14 +62,24 @@ export function savedToggle(n: Notice, compact = true): HTMLButtonElement {
   }, icon("bookmark"), compact ? null : h("span", {}, on ? m.saved : m.save));
 }
 
-/** For a notice in force with a stated start and end: how much of that time has passed, filled up to now.
- *  It moves with the clock (every re-render) and fills from its start when the card first appears. */
-export function liveStrip(r: Row, now: number): HTMLElement | null {
+/** The timetable column: when it starts and when it ends, big and in the place's own time, with a line between them.
+ *  On a notice in force with a stated start and end, the line fills to now (the "strip"). Without dates, the
+ *  category's mark stands in. The same times are written out in the card's facts for screen readers. */
+export function timeCol(r: Row, now: number): HTMLElement {
+  const n = r.n;
   const { startMs, endMs, state } = r.st;
-  if (state !== "active" || startMs === undefined || endMs === undefined || endMs <= startMs || r.st.unverified) return null;
-  const pct = Math.round(Math.min(1, Math.max(0, (now - startMs) / (endMs - startMs))) * 100);
-  return h("div", { class: "strip", title: M().elapsed(pct), "aria-hidden": "true", style: `--k:${pct / 100}` },
-    h("span", { class: "strip-fill" }), h("span", { class: "strip-now" }));
+  if (startMs === undefined && endMs === undefined) return h("div", { class: "cw cw-none", "aria-hidden": "true" }, icon(n.category, "ic cw-ic"));
+  const today = localDay(now, n.tz);
+  const part = (ms: number | undefined, cls: string) => ms === undefined
+    ? h("span", { class: `${cls} cw-open` }, "—")
+    : h("span", { class: cls }, h("b", {}, clock(ms, n.tz).split(" ")[0]!), localDay(ms, n.tz) !== today ? h("small", {}, dayLabel(ms, n.tz)) : null);
+  const live = state === "active" && startMs !== undefined && endMs !== undefined && endMs > startMs && !r.st.unverified;
+  const k = live ? Math.min(1, Math.max(0, (now - startMs!) / (endMs! - startMs!))) : 0;
+  return h("div", { class: "cw", "aria-hidden": "true" },
+    part(startMs, "cw-from"),
+    h("span", { class: `cw-line${live ? " strip" : ""}`, ...(live ? { title: M().elapsed(Math.round(k * 100)), style: `--k:${k.toFixed(3)}` } : {}) },
+      live ? h("span", { class: "strip-fill" }) : null, live ? h("span", { class: "strip-now" }) : null),
+    part(endMs, "cw-to"));
 }
 
 export function card(r: Row, now: number, index = 0): HTMLElement {
@@ -86,6 +96,8 @@ export function card(r: Row, now: number, index = 0): HTMLElement {
     onpointerenter: () => field?.highlight(n.id), onpointerleave: () => field?.highlight(null),
     onclick: (e: Event) => { if ((e.target as Element).closest(".card-title a")) S.lastRect = el.getBoundingClientRect(); },
   },
+    timeCol(r, now),
+    h("div", { class: "card-body" },
     h("div", { class: "card-top" },
       h("span", { class: "cat" }, icon(n.category, "ic ic-s"), m.cat[n.category]),
       statusChip(r, now),
@@ -104,7 +116,6 @@ export function card(r: Row, now: number, index = 0): HTMLElement {
         when ?? (n.currentWhileListed ? m.liveStatusNoTimes : r.st.state === "open_ended" || r.st.state === "stale" ? m.noDatesAnnounced : m.noDatesOfEffect),
         st.detail ? h("span", { class: "rel" }, ` · ${st.detail}`) : null)),
     ),
-    liveStrip(r, now),
     h("p", { class: "meta" },
       h("span", { class: "pub" }, tx(n.publisher), n.sources.length > 1 ? ` ${m.republications(n.sources.length - 1)}` : ""),
       n.publishedAt ? h("span", {}, `${m.published} `, h("time", { datetime: n.publishedAt }, dayClock(Date.parse(n.publishedAt), n.tz))) : null,
@@ -113,6 +124,6 @@ export function card(r: Row, now: number, index = 0): HTMLElement {
         h("time", { datetime: n.lastVerifiedAt }, relative(Date.parse(n.lastVerifiedAt), now))),
       h("a", { class: "src", href: n.sourceUrl, target: "_blank", rel: "noopener noreferrer" }, m.original, icon("external", "ic ic-xs"), h("span", { class: "sr" }, ` ${m.newTab}`)),
     ),
-  );
+  ));
   return reveal(el, `card:${n.locationId}:${n.id}`, index);
 }

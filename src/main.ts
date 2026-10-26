@@ -8,7 +8,8 @@ import type { Feed, GeoLocation } from "./domain/types.ts";
 import { rows } from "./domain/view.ts";
 import { clear, h, icon } from "./app/dom.ts";
 import { reducedMotion } from "./app/fx/loop.ts";
-import { circleSwap, installPointerFx } from "./app/fx/motion.ts";
+import { FlapText } from "./app/fx/flap.ts";
+import { installPointerFx } from "./app/fx/motion.ts";
 import { M, setLang, tx } from "./app/i18n/index.ts";
 import { lastFeed, rememberFeed, save } from "./app/prefs.ts";
 import { failedSources, now, onRender, onSwitch, prefsHere, S, savedEntry } from "./app/state.ts";
@@ -17,7 +18,6 @@ import { openLocations, openPrefs } from "./app/views/dialogs.ts";
 import { feedField, fieldApi, hero, liveClock, mountStage, startClocks } from "./app/views/hero.ts";
 import { banners, feedBody } from "./app/views/home.ts";
 import { railFor, railUpdate } from "./app/views/rail.ts";
-import { ticker } from "./app/views/ticker.ts";
 import { sourcesPage } from "./app/views/sources.ts";
 
 const app = document.getElementById("app")!;
@@ -83,7 +83,11 @@ function footer(): HTMLElement {
   const f = S.feed;
   const items = f ? f.sources.map((s) => `${tx(s.name)} — ${m.srcState[s.state]}`) : [];
   const track = items.length ? h("div", { class: "marquee", "aria-hidden": "true" }, h("div", { class: "marquee-track" }, ...[...items, ...items, ...items, ...items].map((t) => h("span", {}, t)))) : null;
+  const mark = new FlapText(7, "c-mark");
+  mark.set("DAYWIRE", { animate: false });
+  const shuffle = () => { mark.scramble(true); setTimeout(() => mark.set("DAYWIRE", { stagger: 60 }), 380); };
   return h("footer", { class: "foot" }, track,
+    h("div", { class: "wrap foot-mark", onpointerenter: shuffle }, mark.el),
     h("div", { class: "wrap foot-in" },
       h("div", { class: "foot-brand" }, brand(), h("p", { class: "muted" }, m.heroSub)),
       h("p", { class: "f-112" }, icon("emergency", "ic ic-s"), h("span", {}, h("strong", {}, `${m.footEmergencyTitle} `), m.footEmergency)),
@@ -115,7 +119,6 @@ function render(): void {
     const onSources = route.startsWith("/sources");
     if (onSources) mainEl.append(sourcesPage());
     else mainEl.append(feedBody(all, t0));
-    clear(tickSlot); const tk = onSources ? null : ticker(all, t0); if (tk) tickSlot.append(tk);
     clear(railSlot); rail = onSources ? null : railFor(mainEl); if (rail) railSlot.append(rail);
     clear(footSlot); footSlot.append(footer());
     feedField(S.feed, all, t0);
@@ -151,7 +154,9 @@ async function switchLocation(loc: GeoLocation, animate = true): Promise<void> {
   S.filters = { q: "", categories: [], time: "all", publisher: "", mineOnly: false, savedOnly: false };
   if (savedEntry(loc.id)) { S.prefs = { ...S.prefs, activeId: loc.id }; save(S.prefs); }
   if (location.hash.startsWith("#/at/") || location.hash.startsWith("#/n/")) history.replaceState(null, "", "#/");
-  if (animate) circleSwap(render); else render();
+  // the board flips to the new place (and the city morphs into its own streets); no page-wide wipe needed
+  void animate;
+  render();
   await loadFeed(loc);
   route();
 }
@@ -208,6 +213,8 @@ function onScroll(): void {
     else if (y > lastY + 6) root.classList.add("bar-away");
     else if (y < lastY - 6) root.classList.remove("bar-away");
     lastY = y;
+    // the rail steps aside when the page's end (the footer) comes up
+    root.classList.toggle("rail-off", sheet.getBoundingClientRect().bottom < innerHeight * 0.75);
     railUpdate(rail, mainEl);
   });
 }
@@ -219,7 +226,8 @@ function installShell(): void {
   startClocks();
   installPointerFx();
   addEventListener("scroll", onScroll, { passive: true });
-  addEventListener("resize", measure);
+  let narrow = innerWidth < 760;
+  addEventListener("resize", () => { measure(); if ((innerWidth < 760) !== narrow) { narrow = !narrow; render(); } });
   if (typeof ResizeObserver !== "undefined") new ResizeObserver(measure).observe(shell);
   // a touch on the city sends a ring through its streets
   shell.addEventListener("pointerdown", (e) => { if (!(e.target as Element).closest("a,button,input,select,label")) fieldApi()?.ripple(e.clientX, e.clientY); });
@@ -234,6 +242,13 @@ async function start(): Promise<void> {
   installShell();
   onRender(render);
   onSwitch((loc) => void switchLocation(loc));
+  // "/" searches from anywhere (not while typing, and not with a dialog open)
+  addEventListener("keydown", (e) => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || document.querySelector("dialog[open]")) return;
+    const t = e.target as HTMLElement;
+    if (t.closest("input, textarea, select, [contenteditable]")) return;
+    e.preventDefault(); focusSearch();
+  });
   addEventListener("hashchange", async () => {
     if (location.hash.startsWith("#/at/")) { const l = await locationFromLink(); if (l) return void switchLocation(l); }
     route();

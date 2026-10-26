@@ -7,6 +7,7 @@ import { h, icon } from "../dom.ts";
 import { dayClock, dayLabel, getLang, LANGS, M, rangeLabel, tx, zoneName } from "../i18n/index.ts";
 import { S } from "../state.ts";
 import { savedToggle, sourceLangNote, whereText } from "./card.ts";
+import { ticketFor } from "./board.ts";
 import { modal } from "./dialogs.ts";
 import { severityChip, statusChip, statusExplain } from "./status-ui.ts";
 
@@ -47,6 +48,7 @@ export function openDetail(r: Row, now: number): void {
   const text = alt?.text ?? n.body;
   const textLang = alt?.lang ?? n.language;
   modal("dlg-detail", tx(n.headline), () => [
+    ticketFor(r, now),
     h("div", { class: "d-chips" }, statusChip(r, now), severityChip(n), h("span", { class: "cat" }, icon(n.category, "ic ic-s"), m.cat[n.category]), n.fixture ? h("span", { class: "chip st-fixture" }, m.testData) : null),
     h("p", { class: "d-explain" }, statusExplain(n, r.st), r.st.unverified ? h("strong", { class: "warn" }, ` ${m.notVerifiedSince(dayClock(Date.parse(n.lastVerifiedAt), n.tz))}`) : null),
     h("dl", { class: "d-facts" },

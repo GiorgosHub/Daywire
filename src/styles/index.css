@@ -4,3 +4,5 @@
 @import "./components.css" layer(components);
 @import "./app.css" layer(app);
 @import "./shell.css" layer(shell);
+@import "./board.css" layer(shell);
+@import "./notices.css" layer(shell);

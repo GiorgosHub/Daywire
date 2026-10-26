@@ -6,7 +6,7 @@ import { h, icon } from "../dom.ts";
 import { clock, dayClock, M, num, relative, tx } from "../i18n/index.ts";
 import { filtersActive, isSaved, prefsHere, rerender, S, saveLocation, savedEntry, update, updateEntry } from "../state.ts";
 import { card } from "./card.ts";
-import { countTo } from "../fx/motion.ts";
+import { flapNumber } from "../fx/flap.ts";
 import { reveal } from "../fx/reveal.ts";
 import { openLocations, openPlaces } from "./dialogs.ts";
 
@@ -83,7 +83,8 @@ function overview(sec: ReturnType<typeof sections>, all: Row[], f: Feed): HTMLEl
   const places = (entry?.placeIds ?? []).map((id) => locality?.places.find((p) => p.id === id)).filter(Boolean).map((p) => tx(p!.name));
   const scopeLabel = [tx(loc.name), ...places, ...(entry?.terms ?? [])].join(" · ");
   const newCount = S.previousVisit ? all.filter((r) => Date.parse(r.n.firstSeenAt ?? r.n.updatedAt ?? r.n.publishedAt ?? "") > S.previousVisit!).length : 0;
-  const n = (v: number, label: string, k: string) => { const el = h("strong", { class: "ov-n" }); countTo(el, `ov:${loc.id}:${k}`, v, num); return h("div", { class: "ov-item" }, el, h("span", {}, label)); };
+  const n = (v: number, label: string, k: string) => h("div", { class: "ov-item" },
+    h("strong", { class: "ov-n" }, h("span", { class: "sr" }, num(v)), flapNumber(`ov:${loc.id}:${k}`, String(v))), h("span", {}, label));
   return h("section", { class: "overview", "aria-label": m.overview },
     h("div", { class: "ov-scope" },
       h("span", { class: "ov-for" }, `${m.forPlace} `, h("strong", {}, scopeLabel)),
@@ -119,14 +120,14 @@ function toolbar(): HTMLElement {
   const publishers = [...new Map((S.feed?.notices ?? []).map((n) => [n.publisher.en, n.publisher])).values()];
   const entry = savedEntry();
   const hasPlaces = Boolean(entry && (entry.placeIds.length || entry.terms.length));
-  const input = h("input", { id: "q", type: "search", value: f.q, autocomplete: "off", spellcheck: "false", placeholder: m.searchPlaceholder, "aria-describedby": "q-hint" }) as HTMLInputElement;
+  const input = h("input", { id: "q", type: "search", value: f.q, autocomplete: "off", spellcheck: "false", placeholder: m.searchPlaceholder, "aria-describedby": "q-hint", "aria-keyshortcuts": "/" }) as HTMLInputElement;
   let timer = 0;
   input.addEventListener("input", () => { clearTimeout(timer); timer = window.setTimeout(() => { S.filters = { ...S.filters, q: input.value }; rerender(); }, 180); });
   return h("section", { class: "toolbar", "aria-label": m.searchAndFilters },
     h("div", { class: "search" },
       h("label", { for: "q" }, icon("search"), h("span", { class: "sr" }, m.searchNotices)),
       input,
-      f.q ? h("button", { type: "button", class: "btn-icon", "aria-label": m.clear, onclick: () => setF({ q: "" }) }, icon("close")) : null,
+      f.q ? h("button", { type: "button", class: "btn-icon", "aria-label": m.clear, onclick: () => setF({ q: "" }) }, icon("close")) : h("kbd", { class: "q-key", "aria-hidden": "true", title: m.searchKey }, "/"),
     ),
     h("p", { id: "q-hint", class: "sr" }, m.accentsHint),
     h("div", { class: "filters" },

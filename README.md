@@ -72,18 +72,22 @@ docs/           sources, data model and rules, ADR-001 (architecture), ADR-002 (
 ```
 
 ## Design and motion
-The hero is a city at night, drawn live in WebGL2 (`src/app/fx/cityfield.ts`). It is an abstract city, not a map, and
-the page says so. Its only lights are the notices in force or due today, in the issuer's severity colours, and its
-light follows the real sun at that place.
+**The hero is a split-flap departure board for your city** (`src/app/views/board.ts`, `src/app/fx/flap.ts`).
+- Every character is a real flap that turns over: the title, the place's clock, and today's notices read like a
+  timetable (from, until, what, where, status and a 24-hour track with "now").
+- While a feed loads the flaps spin; a new place flips the whole board.
+- Under the board, today's notices run on an LED dot-matrix strip.
 
-When a place opens, the city **switches on**: a scanner crosses the dark streets and the lights come on one by one,
-while the headline turns from thin to full weight (variable Inter). Today's notices then run along **the wire**, a
-ticker where the city meets the page. The city **holds still while the paper sheet slides over it**. The sheet shows:
-- cards for notices in force, each with a **live strip** of how much of its stated time has passed;
-- on wide screens, a **rail** of the page's sections with a pulse at your reading position.
+**Behind the board is the city at night**, drawn live in WebGL2 (`cityfield.ts`). It is abstract, not a map, and the
+page says so. Its only lights are today's notices, and its light follows the real sun at that place. When a place
+opens, the city switches on.
 
-Without WebGL there is a quiet CSS sky. With reduced motion everything is still and complete. Tokens, components,
-the motion inventory and the rules are in [docs/design-system.md](docs/design-system.md).
+**The page below is a concrete-grey sheet that slides over the city.** Notices are timetable entries, with a time
+line that fills to now while they are in force. On wide screens, a rail of the page's sections tracks your reading
+position.
+
+Without WebGL the sky is static CSS. With reduced motion every flap is set directly and nothing moves. The tokens,
+the motion inventory, the components and the rules are in [docs/design-system.md](docs/design-system.md).
 
 ## Known limits
 - **Freshness depends on traffic.** Sources are read when a location is opened, at most once per 5-minute CDN window per location. There is no scheduled job.

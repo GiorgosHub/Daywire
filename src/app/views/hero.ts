@@ -10,8 +10,9 @@ import { countTo } from "../fx/motion.ts";
 import { words } from "../fx/reveal.ts";
 import { clock, M, num, tx, viewerTz } from "../i18n/index.ts";
 import { prefsHere, S, switchTo } from "../state.ts";
+import { cityBoard } from "./board.ts";
 import { coverageBadge } from "./home.ts";
-import { wire } from "./wire.ts";
+import { ticker } from "./ticker.ts";
 
 let field: Field | null = null;
 let fieldTried = false;
@@ -81,51 +82,17 @@ export function startClocks(): void {
   }, 1000);
 }
 
-let lastKey = "";
-
+/** The hero: the city board in front of the city, then one line on what DAYWIRE is and where you can switch place. */
 export function hero(all: Row[], now: number): HTMLElement {
   const m = M();
   const f = S.feed;
-  const loc = S.current;
-  const key = `${loc?.id ?? "-"}|${m.heroTitleA}`;
-  const entering = key !== lastKey && !reducedMotion();
-  lastKey = key;
-
-  const titleA = words(m.heroTitleA);
-  const titleB = words(m.heroTitleB, titleA.length);
-  const underline = h("span", { class: "pulse-line", "aria-hidden": "true" });
-  underline.innerHTML = '<svg viewBox="0 0 400 24" preserveAspectRatio="none"><path class="d" pathLength="1" d="M0 14 H170 L182 14 L190 3 L200 22 L209 8 L216 14 H400"/><path class="s" pathLength="1" d="M0 14 H170 L182 14 L190 3 L200 22 L209 8 L216 14 H400"/></svg>';
-
-  const sec = f && f.coverage.level !== "none" ? sections(all, prefsHere(), now) : null;
-  const counter = (k: string, v: number, label: string, tone: string) => {
-    const n = h("strong", { class: "ro-n" });
-    countTo(n, `${loc?.id}:${k}`, v, num);
-    return h("div", { class: `ro ro-${tone}` }, n, h("span", { class: "ro-l" }, label));
-  };
-
-  const copy = h("div", { class: "hero-copy" },
-    loc ? h("div", { class: "here" },
-      h("p", { class: "here-place" }, h("span", {}, h("strong", {}, tx(loc.name)), [tx(loc.admin1), tx(loc.country)].filter(Boolean).map((x) => `, ${x}`).join(""))),
-      h("p", { class: "here-time" }, liveClock(loc.tz),
-        h("span", { class: "here-zone" }, loc.tz !== viewerTz() ? m.localTime(clock(now, loc.tz).split(" ").slice(1).join(" ")) : m.localTime("").trim()),
-        h("span", { class: "here-coord" }, coords(loc.lat, loc.lon))),
-    ) : h("div", { class: "here" }, h("p", { class: "here-place" }, h("strong", {}, m.noLocationYet))),
-    h("h1", { class: "title" }, ...titleA, " ", h("em", {}, ...titleB, underline)),
-    h("p", { class: "sub" }, m.heroSub),
-    sec ? h("div", { class: "readout", role: "group", "aria-label": m.readout },
-      counter("now", sec.counts.inForce, m.ovInForce, "now"),
-      counter("next", sec.counts.next7, m.ovNext7, "next"),
-      counter("ended", sec.counts.endedRecently, m.ovEnded, "ended"),
-      h("div", { class: "ro ro-cov" }, coverageBadge(f!.coverage.level)),
-    ) : null,
-    h("div", { class: "hero-foot" }, freshness(), locationChips()),
-  );
-
-  const panel = heroPanel(all, now);
+  const foot: Node[] = [freshness(), f && f.location.id === S.current?.id ? coverageBadge(f.coverage.level) : null].filter(Boolean) as Node[];
+  const board = cityBoard(all, now, ticker(all, now), foot);
   const caption = f && f.coverage.level !== "none" && field
     ? h("p", { class: "field-cap" }, (() => { const k = signalsFrom(all, now).length; return k ? m.fieldCaption(k) : m.fieldCaptionNone; })())
     : null;
-  return h("div", { class: `wrap hero${entering ? " entering" : " settled"}` }, copy, panel, caption);
+  return h("div", { class: "wrap hero" }, board,
+    h("div", { class: "hero-under" }, h("p", { class: "sub" }, m.heroSub), locationChips(), caption));
 }
 
 function freshness(): HTMLElement {
@@ -146,16 +113,4 @@ function locationChips(): HTMLElement | null {
   return h("nav", { class: "loc-chips", "aria-label": M().yourLocations }, saved.map((s) => h("button", {
     type: "button", class: "loc-chip", "aria-current": s.location.id === S.current?.id ? "true" : null, onclick: () => switchTo(s.location),
   }, s.label ? h("span", { class: "lc-label" }, s.label) : null, tx(s.location.name))));
-}
-
-function heroPanel(all: Row[], now: number): HTMLElement | null {
-  const m = M();
-  const f = S.feed;
-  if (!S.current) return h("div", { class: "hero-empty", "aria-hidden": "true" }, icon("pin"));
-  if (!f) return h("div", { class: "wire wire-loading", "aria-hidden": "true" }, h("span", { class: "wl-scan" }));
-  if (f.coverage.level === "none") return h("section", { class: "wire wire-local", "aria-label": m.localTime("") },
-    h("p", { class: "wl-big" }, liveClock(f.location.tz)),
-    h("p", { class: "wire-empty" }, `${tx(f.location.name)} · ${m.localTime(clock(now, f.location.tz).split(" ").slice(1).join(" ") || f.location.tz)}`),
-    h("p", { class: "wire-empty" }, m.covLevel.none));
-  return wire(all, now, f.location);
 }
