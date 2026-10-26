@@ -1,0 +1,53 @@
+/* DAYWIRE tokens. Navy is the city at night (header and hero only); off-white paper is the day you read on.
+   Lime marks "now" and focus, nothing else. Status colours appear only on status. */
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-SemiBold.woff") format("woff"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Inter Display"; src: url("/fonts/InterDisplay-Bold.woff") format("woff"); font-weight: 700; font-display: swap; }
+
+:root {
+  --navy-950: #070F1C;
+  --navy-900: #0C1A2E;
+  --navy-800: #132741;
+  --navy-700: #1E3657;
+  --on-navy: #EEF2F6;
+  --on-navy-2: #A9B6C6;
+  --navy-line: rgb(255 255 255 / 0.12);
+
+  --paper: #F5F1E8;
+  --surface: #FFFDF8;
+  --surface-2: #EEE8DC;
+  --line: #DED6C7;
+  --line-2: #C9BEAB;
+  --ink: #152030;
+  --slate: #384657;
+  --muted: #5A6676;
+
+  --lime: #C8F04B;
+  --teal: #0B6E66;
+  --teal-2: #DDEFEB;
+  --focus: #0B6E66;
+
+  --st-active-ink: #8A3E04; --st-active-bg: #FCE9D4; --st-active-mark: #E0731B;
+  --st-upcoming-ink: #075A53; --st-upcoming-bg: #DAEFEA; --st-upcoming-mark: #11907F;
+  --st-ended-ink: #4F5967; --st-ended-bg: #ECE8E0; --st-ended-mark: #98A1AC;
+  --st-stale-ink: #6B5000; --st-stale-bg: #F8EDC9; --st-stale-mark: #B8901A;
+  --sev-yellow-ink: #614B00; --sev-yellow-bg: #F8EDB8; --sev-yellow-mark: #E2BC2C;
+  --sev-orange-ink: #7F3300; --sev-orange-bg: #FBDFC6; --sev-orange-mark: #E86F17;
+  --sev-red-ink: #861B14; --sev-red-bg: #F7D6D2; --sev-red-mark: #D2362B;
+
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  --display: "Inter Display", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --r-s: 6px;
+  --r: 10px;
+  --r-l: 14px;
+  --gut: 16px;
+  --wrap: 1200px;
+  --shadow: 0 1px 0 rgb(21 32 48 / 0.04), 0 1px 2px rgb(21 32 48 / 0.06);
+  --shadow-l: 0 12px 40px rgb(7 15 28 / 0.28);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms;
+  --t: 200ms;
+}
+@media (min-width: 720px) { :root { --gut: 28px; } }
+@media (min-width: 1100px) { :root { --gut: 40px; } }
