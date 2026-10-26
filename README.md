@@ -82,12 +82,13 @@ docs/           sources, data model and rules, ADR-001 (architecture), ADR-002 (
 page says so. Its only lights are today's notices, and its light follows the real sun at that place. When a place
 opens, the city switches on.
 
-**The page below is a concrete-grey sheet that slides over the city.** Notices are timetable entries, with a time
+**The page below is a warm grey sheet that slides over the city.** Notices are timetable entries, with a time
 line that fills to now while they are in force. On wide screens, a rail of the page's sections tracks your reading
 position.
 
 Without WebGL the sky is static CSS. With reduced motion every flap is set directly and nothing moves. The tokens,
-the motion inventory, the components and the rules are in [docs/design-system.md](docs/design-system.md).
+the motion inventory, the components and the rules are in [docs/design-system.md](docs/design-system.md). The palette
+is a station board's: graphite and warm white, with colour only on warnings and categories.
 
 ## Known limits
 - **Freshness depends on traffic.** Sources are read when a location is opened, at most once per 5-minute CDN window per location. There is no scheduled job.

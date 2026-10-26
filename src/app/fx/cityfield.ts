@@ -74,17 +74,17 @@ void main(){
   if (uR.w > 0.) { float rt = uT - uR.z; float rr = length(c - uR.xy/uRes.y*SCALE); ring = exp(-pow(rr - rt*6., 2.)*3.) * exp(-rt*1.3); }
   float sweep = exp(-pow(fract(c.x/ (uRes.x/uRes.y*SCALE) - uSweep) - .5, 2.)*90.) * .6;
   float torch = exp(-dm*dm*.05) * uM.z;
-  vec3 navy = mix(vec3(.024,.052,.098), vec3(.055,.105,.18), uDay);
-  vec3 lineCol = mix(vec3(.42,.55,.78), vec3(.6,.72,.86), uDay);
+  vec3 night = mix(vec3(.03,.03,.033), vec3(.075,.072,.07), uDay);
+  vec3 lineCol = mix(vec3(.55,.53,.5), vec3(.72,.7,.66), uDay);
   vec2 uv = fc / uRes;
   // the switch-on: streets behind the scanner are lit, ahead of it they are still dark
   float lit = uScan < 0. ? 1. : mix(.18, 1., smoothstep(uScan + .02, uScan - .06, uv.x));
   float scan = uScan < 0. ? 0. : exp(-pow((uv.x - uScan)*26., 2.));
   float light = (1. + torch*2.6 + ring*3. + sweep*lit) * lit + scan*4.;
-  vec3 col = navy + lineCol * (streets*.07 + avenues*.12 + cont*.03) * light + vec3(.78,.94,.3) * (ring * streets * .25 + scan * (streets*.5 + .05));
+  vec3 col = night + lineCol * (streets*.07 + avenues*.12 + cont*.03) * light + vec3(.97,.95,.9) * (ring * streets * .25 + scan * (streets*.5 + .05));
   col += glow;
   col *= .72 + .28*smoothstep(1.25, .15, length((uv - vec2(.72, .62)) * vec2(1., 1.5)));
-  col = mix(col, vec3(.047,.102,.18), smoothstep(.25, 0., uv.y) * .55);
+  col = mix(col, vec3(.05,.05,.052), smoothstep(.25, 0., uv.y) * .55);
   // film grain, fresh every frame
   col += (h21(fc + fract(uT * 7.3) * 113.) - .5) * .035;
   o = vec4(col, 1.);

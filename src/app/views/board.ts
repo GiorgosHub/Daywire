@@ -60,7 +60,7 @@ class Slot {
     this.what.set(l?.what ?? "", { ...o, delay: delay + 120 });
     this.where?.set(l?.where ?? "", { ...o, delay: delay + 260 });
     this.status?.set(l?.status ?? "", { ...o, delay: delay + 360 });
-    this.li.className = `br${l ? ` t-${l.tone}` : " empty"}${l?.fresh ? " fresh" : ""}`;
+    this.li.className = `br${l ? ` t-${l.tone}` : " empty"}${l?.fresh ? " br-new" : ""}`;
     if (l?.tile) this.li.style.setProperty("--c", l.tile); else this.li.style.removeProperty("--c");
     if (l?.href) {
       this.a.setAttribute("href", l.href); this.a.removeAttribute("tabindex"); this.a.removeAttribute("aria-hidden");
@@ -169,7 +169,7 @@ class Board {
     }
     this.foot.replaceChildren(...foot);
     this.tickSlot.replaceChildren(...(ticker ? [ticker] : []));
-    this.el.style.setProperty("--now", `${(this.dayFrac(now) * 100).toFixed(2)}%`);
+    this.el.style.setProperty("--at", `${(this.dayFrac(now) * 100).toFixed(2)}%`);
   }
 
   private dayFrac(ms: number): number {

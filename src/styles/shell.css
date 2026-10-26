@@ -4,15 +4,15 @@
 :root {
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-  --glass: rgb(9 19 35 / 0.62);
+  --glass: rgb(18 18 19 / 0.62);
   --glass-line: var(--night-veil-2);
-  --sky: #8FD3E8;
+  --sky: #CFC8BA;
   --amber: #FFC978;
   /* data colours on the night background (bars, dots, ticker). hero.ts mirrors these for the city field's lights. */
   --now-on-dark: #F59A4A;
-  --next-on-dark: #3FC2AE;
+  --next-on-dark: #F4F1EA;
   --warn-on-dark: #F2B544;
-  --sev1-on-dark: #B9D4DD;
+  --sev1-on-dark: #C9C3B7;
   --sev2-on-dark: #E9C94A;
   --sev3-on-dark: #F08A3C;
   --sev4-on-dark: #E5544A;
@@ -24,14 +24,14 @@
   --night-veil: rgb(255 255 255 / 0.05);
   --night-veil-2: rgb(255 255 255 / 0.1);
   --night-veil-3: rgb(255 255 255 / 0.22);
-  --lime-glow: rgb(200 240 75 / 0.55);
+  --now-glow: rgb(247 244 236 / 0.55);
 }
 
 /* ——— shell + stage ——— */
 /* The city holds still (sticky) while the sheet slides over it. --p goes 0 → 1 as the sheet covers it (set in main.ts):
    the copy drifts up, the city leans back and dims. A hero taller than the window first scrolls to its bottom. */
-.shell { position: sticky; top: var(--pin-top, 0px); z-index: 0; isolation: isolate; background: var(--navy-950); color: var(--on-navy); overflow: hidden; --p: 0; }
-.shell::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--navy-950); opacity: calc(var(--p) * 0.75); }
+.shell { position: sticky; top: var(--pin-top, 0px); z-index: 0; isolation: isolate; background: var(--night-950); color: var(--on-night); overflow: hidden; --p: 0; }
+.shell::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: var(--night-950); opacity: calc(var(--p) * 0.75); }
 /* film grain (as on the Giannotas site) is drawn inside the city field's shader, so it costs nothing extra;
    without WebGL the CSS sky below carries a static grain of its own. */
 .stage { position: absolute; inset: 0; z-index: -1; pointer-events: none; scale: calc(1 + var(--p) * 0.07); transform-origin: 60% 30%; }
@@ -40,10 +40,10 @@
 .stage-css {
   position: absolute; inset: -20%;
   background:
-    radial-gradient(40% 50% at 78% 22%, rgb(30 80 120 / 0.55), transparent 70%),
-    radial-gradient(35% 45% at 18% 70%, rgb(17 144 127 / 0.28), transparent 70%),
-    radial-gradient(30% 30% at 60% 80%, rgb(200 240 75 / 0.08), transparent 70%),
-    var(--navy-950);
+    radial-gradient(40% 50% at 78% 22%, rgb(60 58 54 / 0.55), transparent 70%),
+    radial-gradient(35% 45% at 18% 70%, rgb(90 86 80 / 0.28), transparent 70%),
+    radial-gradient(30% 30% at 60% 80%, rgb(247 244 236 / 0.08), transparent 70%),
+    var(--night-950);
 }
 .stage-css::before { content: ""; position: absolute; inset: 0; opacity: 0.5;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
@@ -60,28 +60,28 @@
 .stage::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background:
-    linear-gradient(90deg, rgb(7 15 28 / 0.78) 0%, rgb(7 15 28 / 0.35) 48%, rgb(7 15 28 / 0.05) 100%),
-    linear-gradient(180deg, rgb(7 15 28 / 0.55) 0%, transparent 18%, transparent 70%, rgb(7 15 28 / 0.9) 100%);
+    linear-gradient(90deg, rgb(11 11 12 / 0.78) 0%, rgb(11 11 12 / 0.35) 48%, rgb(11 11 12 / 0.05) 100%),
+    linear-gradient(180deg, rgb(11 11 12 / 0.55) 0%, transparent 18%, transparent 70%, rgb(11 11 12 / 0.9) 100%);
 }
 @media (max-width: 999px) {
-  .stage::after { background: linear-gradient(180deg, rgb(7 15 28 / 0.7) 0%, rgb(7 15 28 / 0.35) 40%, rgb(7 15 28 / 0.85) 100%); }
+  .stage::after { background: linear-gradient(180deg, rgb(11 11 12 / 0.7) 0%, rgb(11 11 12 / 0.35) 40%, rgb(11 11 12 / 0.85) 100%); }
 }
 
 /* the page is a sheet of paper laid over the city */
 .sheet {
   position: relative; z-index: 2; margin-top: -32px; background: var(--paper);
-  border-radius: 28px 28px 0 0; box-shadow: 0 -24px 60px rgb(3 8 16 / 0.45);
+  border-radius: 28px 28px 0 0; box-shadow: 0 -24px 60px rgb(6 6 6 / 0.45);
 }
 .tick-slot:empty + .main { padding-top: 24px; }
 
 /* ——— top bar ——— */
-.top { position: relative; z-index: 1; background: transparent; color: var(--on-navy); border: 0; }
+.top { position: relative; z-index: 1; background: transparent; color: var(--on-night); border: 0; }
 .top-in { display: flex; align-items: center; gap: 12px; min-height: 68px; }
 .brand { display: inline-flex; align-items: center; gap: 4px; color: #fff; text-decoration: none; font: 700 19px/1 var(--display); letter-spacing: 0.1em; }
 .brand:hover { color: #fff; }
 .b-pulse { display: inline-block; width: 26px; height: 14px; }
 .b-pulse svg { width: 100%; height: 100%; overflow: visible; }
-.b-pulse path { fill: none; stroke: var(--lime); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 0; }
+.b-pulse path { fill: none; stroke: var(--now); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 0; }
 .brand:hover .b-pulse path { animation: trace 900ms var(--ease-out); }
 @keyframes trace { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
 .top-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; margin-right: -8px; }
@@ -89,15 +89,15 @@
   display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; margin-right: 6px;
   border: 1px solid var(--glass-line); border-radius: 999px; background: rgb(255 255 255 / 0.06);
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  color: var(--on-navy); font-size: 14px; font-weight: 600;
+  color: var(--on-night); font-size: 14px; font-weight: 600;
   transition: background var(--t) var(--ease), border-color var(--t) var(--ease);
 }
 .place-btn:hover { background: rgb(255 255 255 / 0.12); border-color: var(--night-veil-3); }
-.place-btn .ic { color: var(--lime); }
-.badge { font-size: 12px; padding: 1px 6px; border-radius: 999px; background: var(--lime); color: var(--navy-900); }
-.dot-count { position: absolute; top: 6px; right: 5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--lime); color: var(--navy-900); font-size: 11px; font-weight: 700; line-height: 16px; }
+.place-btn .ic { color: var(--now); }
+.badge { font-size: 12px; padding: 1px 6px; border-radius: 999px; background: var(--now); color: var(--night-900); }
+.dot-count { position: absolute; top: 6px; right: 5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--now); color: var(--night-900); font-size: 11px; font-weight: 700; line-height: 16px; }
 .pb-name { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pb-cc { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--on-navy-2); }
+.pb-cc { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--on-night-2); }
 @media (max-width: 420px) {
   .top-in { gap: 6px; }
   .brand { font-size: 17px; letter-spacing: 0.06em; }
@@ -112,59 +112,59 @@
 /* ——— hero: the city board, then one line about DAYWIRE ——— */
 .hero { position: relative; padding-top: 18px; padding-bottom: 76px; }
 .hero-under { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 22px; translate: 0 calc(var(--p) * -24px); }
-.hero .sub { margin: 0; color: var(--on-navy-2); font-size: 15px; max-width: 34em; }
+.hero .sub { margin: 0; color: var(--on-night-2); font-size: 15px; max-width: 34em; }
 .board { translate: 0 calc(var(--p) * -48px); }
 
 @keyframes fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-.fresh { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--on-navy-2); text-decoration: none; font-variant-numeric: tabular-nums; }
+.fresh { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--on-night-2); text-decoration: none; font-variant-numeric: tabular-nums; }
 .fresh:hover { color: #fff; }
-.fresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 0 rgb(200 240 75 / 0.6); animation: beat 2.8s ease-out infinite; flex: none; }
+.fresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--now); box-shadow: 0 0 0 0 rgb(247 244 236 / 0.6); animation: beat 2.8s ease-out infinite; flex: none; }
 .fresh.warn .fresh-dot { background: var(--warn-on-dark); animation: none; }
-.fresh.none .fresh-dot { background: transparent; border: 1.5px solid var(--on-navy-2); animation: none; }
-@keyframes beat { 0% { box-shadow: 0 0 0 0 var(--lime-glow); } 70%, 100% { box-shadow: 0 0 0 9px rgb(200 240 75 / 0); } }
+.fresh.none .fresh-dot { background: transparent; border: 1.5px solid var(--on-night-2); animation: none; }
+@keyframes beat { 0% { box-shadow: 0 0 0 0 var(--now-glow); } 70%, 100% { box-shadow: 0 0 0 9px rgb(247 244 236 / 0); } }
 .loc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.loc-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgb(255 255 255 / 0.04); color: var(--on-navy-2); font-size: 13px; font-weight: 600; transition: all var(--t) var(--ease); }
+.loc-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgb(255 255 255 / 0.04); color: var(--on-night-2); font-size: 13px; font-weight: 600; transition: all var(--t) var(--ease); }
 .loc-chip:hover { color: #fff; border-color: rgb(255 255 255 / 0.3); }
-.loc-chip[aria-current="true"] { background: var(--lime); border-color: var(--lime); color: var(--navy-900); }
+.loc-chip[aria-current="true"] { background: var(--now); border-color: var(--now); color: var(--night-900); }
 .lc-label { font-weight: 400; opacity: 0.8; }
 
 .field-cap {
   display: flex; align-items: center; gap: 8px; margin-left: auto;
-  font-size: 12px; color: rgb(169 182 198 / 0.8); letter-spacing: 0.01em;
+  font-size: 12px; color: rgb(168 164 156 / 0.8); letter-spacing: 0.01em;
 }
 .field-cap::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--sky); box-shadow: 0 0 10px var(--sky); flex: none; }
 
 /* ——— compact bar after the hero ——— */
 .compact {
   position: fixed; top: 0; left: 0; right: 0; z-index: 30; transform: translateY(-110%); pointer-events: none;
-  background: rgb(9 19 35 / 0.82); -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
-  border-bottom: 1px solid var(--glass-line); color: var(--on-navy);
+  background: rgb(18 18 19 / 0.82); -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid var(--glass-line); color: var(--on-night);
   transition: transform 420ms var(--ease-out);
 }
 html.scrolled:not(.bar-away) .compact { transform: none; pointer-events: auto; }
 .compact-in { display: flex; align-items: center; gap: 14px; min-height: 54px; }
 .compact .brand { font-size: 15px; }
-.cp-place { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-height: 36px; padding: 0 12px; border: 1px solid var(--glass-line); border-radius: 999px; background: var(--night-veil); color: var(--on-navy); font-size: 13px; font-weight: 600; }
-.cp-place .ic { color: var(--lime); }
-.cp-place .live { color: var(--on-navy-2); font-variant-numeric: tabular-nums; font-weight: 400; }
+.cp-place { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; min-height: 36px; padding: 0 12px; border: 1px solid var(--glass-line); border-radius: 999px; background: var(--night-veil); color: var(--on-night); font-size: 13px; font-weight: 600; }
+.cp-place .ic { color: var(--now); }
+.cp-place .live { color: var(--on-night-2); font-variant-numeric: tabular-nums; font-weight: 400; }
 .compact .btn-icon { margin-right: -8px; }
 
 /* ——— footer ——— */
-.foot { position: relative; z-index: 2; background: var(--navy-950); color: var(--on-navy-2); font-size: 14px; overflow: hidden; }
+.foot { position: relative; z-index: 2; background: var(--night-950); color: var(--on-night-2); font-size: 14px; overflow: hidden; }
 .marquee { overflow: hidden; border-bottom: 1px solid var(--glass-line); padding: 14px 0; -webkit-mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-.marquee-track { display: flex; width: max-content; gap: 40px; animation: marquee 60s linear infinite; font-size: 13px; letter-spacing: 0.04em; color: var(--on-navy-2); }
+.marquee-track { display: flex; width: max-content; gap: 40px; animation: marquee 60s linear infinite; font-size: 13px; letter-spacing: 0.04em; color: var(--on-night-2); }
 .marquee-track span { display: inline-flex; align-items: center; gap: 40px; white-space: nowrap; }
-.marquee-track span::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); opacity: 0.7; }
+.marquee-track span::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--now); opacity: 0.7; }
 .marquee:hover .marquee-track { animation-play-state: paused; }
 @keyframes marquee { to { transform: translateX(-50%); } }
 .foot-in { display: grid; gap: 14px; padding-top: 36px; padding-bottom: 40px; }
 @media (min-width: 900px) { .foot-in { grid-template-columns: 1.1fr 1fr 1fr; gap: 40px; align-items: start; } }
 .foot-brand .brand { font-size: 26px; }
 .foot-brand p { margin-top: 10px; max-width: 26em; }
-.f-112 { display: flex; gap: 8px; align-items: flex-start; color: var(--on-navy); }
+.f-112 { display: flex; gap: 8px; align-items: flex-start; color: var(--on-night); }
 .f-112 strong { color: #fff; }
-.foot a { color: var(--lime); }
-.foot .muted { color: var(--on-navy-2); }
+.foot a { color: var(--now); }
+.foot .muted { color: var(--on-night-2); }
 
 /* ——— the sheet's content: motion and light ——— */
 html.js .rv {
@@ -185,10 +185,10 @@ html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 .card { transition: border-color var(--t) var(--ease), box-shadow 400ms var(--ease-out), transform 400ms var(--ease-out); }
 .card::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms var(--ease);
-  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgb(11 110 102 / 0.08), transparent 50%);
+  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgb(21 21 21 / 0.08), transparent 50%);
 }
 @media (hover: hover) {
-  .card:hover { box-shadow: 0 10px 28px rgb(21 32 48 / 0.08), 0 2px 6px rgb(21 32 48 / 0.05); border-color: var(--line-2); }
+  .card:hover { box-shadow: 0 10px 28px rgb(21 21 21 / 0.08), 0 2px 6px rgb(21 21 21 / 0.05); border-color: var(--line-2); }
   .card:hover::after { opacity: 1; }
 }
 /* ——— the rail: the page's sections as stops on a wire, with a pulse at your reading position ——— */
@@ -204,12 +204,12 @@ html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 }
 .rail ol { position: relative; display: grid; gap: 26px; }
 .rl-line { position: absolute; left: 6px; width: 2px; top: var(--y0, 0); height: calc(var(--y1, 0px) - var(--y0, 0px)); margin-left: -1px; background: var(--line-2); border-radius: 2px; }
-.rl-pulse { position: absolute; left: -4px; top: calc(var(--py, 0px) - var(--y0, 0px)); width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 3px var(--navy-900), 0 0 14px 2px rgb(200 240 75 / 0.8); transition: top 260ms var(--ease-out); }
+.rl-pulse { position: absolute; left: -4px; top: calc(var(--py, 0px) - var(--y0, 0px)); width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--now); box-shadow: 0 0 0 3px var(--night-900), 0 0 14px 2px rgb(247 244 236 / 0.8); transition: top 260ms var(--ease-out); }
 .rail.ahead .rl-pulse { opacity: 0; }
 .rl-stop { position: relative; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; color: var(--slate); font-size: 13px; font-weight: 600; }
 .rl-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-2); background: var(--paper); transition: all 300ms var(--ease-out); flex: none; }
 .rail li.past .rl-dot { background: var(--line-2); }
-.rail li.on .rl-dot { border-color: var(--navy-900); background: var(--navy-900); transform: scale(1.25); }
+.rail li.on .rl-dot { border-color: var(--night-900); background: var(--night-900); transform: scale(1.25); }
 .rl-label {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
   background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
@@ -218,7 +218,7 @@ html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 .rl-n { color: var(--muted); font-variant-numeric: tabular-nums; }
 /* one label at a time, for the stop under the pointer or keyboard focus, so the rail never covers the page */
 .rl-stop:hover .rl-label, .rl-stop:focus-visible .rl-label { opacity: 1; translate: 0 0; }
-.rl-stop:hover .rl-dot { border-color: var(--navy-900); }
+.rl-stop:hover .rl-dot { border-color: var(--night-900); }
 .card.st-active::before, .card.st-open::before { box-shadow: 0 0 12px rgb(224 115 27 / 0.45); }
 .spark { position: fixed; z-index: 90; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; pointer-events: none; }
 .save.on .ic { animation: pop 420ms var(--ease-out); }
@@ -240,13 +240,13 @@ html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 .ring-n span { font-size: 12px; color: var(--muted); }
 
 /* locations dialog: a globe */
-.globe-wrap { position: relative; margin: -4px -22px 14px; padding: 0 22px 10px; background: radial-gradient(60% 90% at 50% 40%, var(--navy-800), var(--navy-950)); border-bottom: 1px solid var(--line); }
+.globe-wrap { position: relative; margin: -4px -22px 14px; padding: 0 22px 10px; background: radial-gradient(60% 90% at 50% 40%, var(--night-800), var(--night-950)); border-bottom: 1px solid var(--line); }
 .globe { display: block; width: 100%; height: 200px; }
-.globe-key { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: 12px; color: var(--on-navy-2); }
+.globe-key { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: 12px; color: var(--on-night-2); }
 .gk { display: inline-flex; align-items: center; gap: 6px; }
 .gk::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
 .gk-cov::before { background: var(--next-on-dark); box-shadow: 0 0 8px var(--next-on-dark); }
-.gk-saved::before { background: var(--lime); box-shadow: 0 0 8px var(--lime); }
+.gk-saved::before { background: var(--now); box-shadow: 0 0 8px var(--now); }
 .dlg-loc .dlg-head { position: relative; z-index: 1; }
 .loc-opt { transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), transform var(--t) var(--ease-out); }
 .loc-opt:hover { transform: translateX(3px); }
@@ -258,10 +258,10 @@ html[data-vt] ::view-transition-new(root) { z-index: 2; }
 
 /* buttons */
 .btn { transition: background var(--t-fast) var(--ease), transform 300ms var(--ease-out), box-shadow 300ms var(--ease-out); }
-@media (hover: hover) { .btn:hover { box-shadow: 0 8px 22px rgb(12 26 46 / 0.22); } }
+@media (hover: hover) { .btn:hover { box-shadow: 0 8px 22px rgb(18 18 18 / 0.22); } }
 .btn:active, .chip-btn:active, .btn-icon:active { transform: scale(0.97); }
 .chip-btn { transition: background var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease), transform 200ms var(--ease-out); }
-.chip-btn[aria-pressed="true"] { box-shadow: 0 4px 14px rgb(12 26 46 / 0.2); }
+.chip-btn[aria-pressed="true"] { box-shadow: 0 4px 14px rgb(18 18 18 / 0.2); }
 
 @media (prefers-reduced-motion: reduce) {
   html.js .rv { opacity: 1; transform: none; }

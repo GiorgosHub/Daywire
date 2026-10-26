@@ -5,10 +5,10 @@
 /* buttons */
 .btn {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px;
-  border: 1px solid var(--navy-900); border-radius: var(--r-s); background: var(--navy-900); color: var(--on-navy);
+  border: 1px solid var(--night-900); border-radius: var(--r-s); background: var(--night-900); color: var(--on-night);
   font-weight: 600; font-size: 15px; text-decoration: none; transition: background var(--t-fast) var(--ease);
 }
-.btn:hover { background: var(--navy-700); color: var(--on-navy); }
+.btn:hover { background: var(--night-700); color: var(--on-night); }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-2); }
 .btn.ghost:hover { background: var(--surface-2); }
 .btn.small { min-height: 36px; padding: 0 12px; font-size: 14px; }
@@ -21,10 +21,10 @@
 }
 .btn-icon:hover { background: var(--surface-2); color: var(--ink); }
 .btn-icon.small { width: 32px; height: 32px; }
-.btn-icon.on-dark { color: var(--on-navy); }
+.btn-icon.on-dark { color: var(--on-night); }
 .btn-icon.on-dark:hover { background: rgb(255 255 255 / 0.08); color: #fff; }
 .btn-icon.with-label { width: auto; padding: 0 14px; gap: 8px; border: 1px solid var(--line-2); font-weight: 600; }
-.link { border: 0; background: none; padding: 4px 2px; color: var(--teal); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 2px; }
+.link { border: 0; background: none; padding: 4px 2px; color: var(--link); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 2px; }
 .link:hover { color: var(--ink); }
 
 /* chips: status is always text + a mark; colour only reinforces */
@@ -44,7 +44,7 @@
 .st-stale.chip { background: var(--st-stale-bg); color: var(--st-stale-ink); outline: 1px dashed var(--st-stale-mark); outline-offset: -1px; }
 .st-info.chip { background: var(--surface-2); color: var(--slate); }
 .st-info .chip-mark { border-radius: 2px; background: var(--muted); }
-.st-new.chip { background: var(--navy-900); color: var(--lime); }
+.st-new.chip { background: var(--night-900); color: var(--now); }
 .st-fixture.chip { background: repeating-linear-gradient(135deg, #FFF3B0 0 6px, #FFE680 6px 12px); color: #4A3A00; }
 .sev.chip { gap: 5px; }
 .sev-yellow.chip { background: var(--sev-yellow-bg); color: var(--sev-yellow-ink); }
@@ -61,7 +61,7 @@
   transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
 .chip-btn:hover { border-color: var(--slate); color: var(--ink); }
-.chip-btn[aria-pressed="true"] { background: var(--navy-900); border-color: var(--navy-900); color: var(--on-navy); }
+.chip-btn[aria-pressed="true"] { background: var(--night-900); border-color: var(--night-900); color: var(--on-night); }
 .chip-btn.ghost { border-style: dashed; }
 
 .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
@@ -83,7 +83,7 @@
 .banner.warn { background: var(--st-stale-bg); color: var(--st-stale-ink); border: 1px solid #E7D28A; }
 .banner.fixture { background: repeating-linear-gradient(135deg, #FFF6C4 0 10px, #FFEFA0 10px 20px); color: #3F3200; border: 1px solid #E2C64B; }
 .state { display: grid; justify-items: start; gap: 10px; padding: 20px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); margin: 0 0 24px; }
-.state.calm { grid-template-columns: auto 1fr; align-items: center; color: var(--st-upcoming-ink); background: var(--st-upcoming-bg); border-color: #B9DDD5; }
+.state.calm { grid-template-columns: auto 1fr; align-items: center; color: var(--st-upcoming-ink); background: var(--st-upcoming-bg); border-color: #D3CEC6; }
 .state.error { border-color: #E9B8B2; background: #FDF1EF; color: var(--sev-red-ink); }
 .state.error h2 { font-size: 18px; }
 .state.error p { color: var(--ink); }
@@ -99,7 +99,7 @@
 }
 .dlg.wide { width: min(760px, calc(100vw - 24px)); }
 .dlg[open] { display: flex; flex-direction: column; animation: dlg-in var(--t) var(--ease); }
-.dlg::backdrop { background: rgb(7 15 28 / 0.55); }
+.dlg::backdrop { background: rgb(11 11 12 / 0.55); }
 @keyframes dlg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 18px 12px 22px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .dlg-head h2 { flex: 1; font: 700 22px/1.25 var(--display); letter-spacing: -0.01em; padding-top: 8px; }

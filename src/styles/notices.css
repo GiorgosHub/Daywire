@@ -9,7 +9,7 @@
   background: transparent; box-shadow: none;
 }
 .card::before { display: none; }
-.card::after { border-radius: 0; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(11 110 102 / 0.06), transparent 55%); }
+.card::after { border-radius: 0; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(21 21 21 / 0.06), transparent 55%); }
 @media (hover: hover) { .card:hover { background: rgb(255 255 255 / 0.45); box-shadow: none; border-color: var(--line); } }
 .card.prio { padding-left: 16px; background: linear-gradient(90deg, var(--band-bg, transparent), transparent 70%); }
 .card.prio::before { display: block; left: 0; top: 0; bottom: -1px; width: 4px; border-radius: 0; background: var(--band, var(--st-active-mark)); box-shadow: none; }
@@ -60,7 +60,7 @@ html.js .card.rv.in:not(.rv-done) .strip-now { animation: strip-run 1400ms var(-
 
 /* section heads: the count sits like a platform number */
 .sec h2.sec-head { font-size: 23px; gap: 12px; margin-bottom: 14px; }
-.sec-head .count { min-width: 30px; height: 30px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: 6px; background: var(--navy-900); color: #fff; font: 700 14px/1 var(--font); }
+.sec-head .count { min-width: 30px; height: 30px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: 6px; background: var(--night-900); color: #fff; font: 700 14px/1 var(--font); }
 #s-priority .sec-head .count { background: var(--st-active-mark); }
 .lead { margin: -6px 0 14px; }
 
@@ -71,9 +71,9 @@ html.js .card.rv.in:not(.rv-done) .strip-now { animation: strip-run 1400ms var(-
 .foot-mark { padding: 44px 0 6px; overflow: hidden; }
 .c-mark { --cw: clamp(34px, 10.6vw, 132px); --ch: calc(var(--cw) * 1.42); --fs: calc(var(--cw) * 1.02); --gap: clamp(3px, 0.6vw, 8px); }
 .c-mark .fc { font-weight: 780; }
-.c-mark .fc:nth-child(n+4) .fh > span { color: var(--lime); }
+.c-mark .fc:nth-child(n+4) .fh > span { color: var(--flap-dim); }
 .c-mark .fc::before { content: ""; position: absolute; z-index: 5; left: -1px; right: -1px; top: 50%; height: 3px; margin-top: -1.5px;
-  background: linear-gradient(90deg, #3A3C42 0 3px, transparent 3px calc(100% - 3px), #3A3C42 calc(100% - 3px)); }
+  background: linear-gradient(90deg, #3C3B3A 0 3px, transparent 3px calc(100% - 3px), #3C3B3A calc(100% - 3px)); }
 
 /* the coverage ring draws its segments in turn */
 @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }

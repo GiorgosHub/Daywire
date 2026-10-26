@@ -1,34 +1,35 @@
-/* DAYWIRE tokens. Navy is the city at night (header and hero only); a cool concrete paper is the day you read on.
-   Lime marks "now" and focus, nothing else. Status colours appear only on status. */
+/* DAYWIRE tokens: a station board. The night is graphite black, never blue; the flaps and "now" are warm white;
+   the page is warm grey paper with black ink. Colour is kept for what matters: the issuers' warning levels
+   (yellow, orange, red), the categories, and status marks, which always come with words. */
 /* One variable family (Inter, OFL), weights 100–900: the headline's weight is animated when the city switches on. */
 @font-face { font-family: "Inter"; src: url("/fonts/Inter-var.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 
 :root {
-  --navy-950: #070F1C;
-  --navy-900: #0C1A2E;
-  --navy-800: #132741;
-  --navy-700: #1E3657;
-  --on-navy: #EEF2F6;
-  --on-navy-2: #A9B6C6;
-  --navy-line: rgb(255 255 255 / 0.12);
+  --night-950: #0B0B0C;
+  --night-900: #121213;
+  --night-800: #1C1C1E;
+  --night-700: #2A2A2D;
+  --on-night: #F4F1EA;
+  --on-night-2: #A8A49C;
+  --night-line: rgb(255 255 255 / 0.12);
 
-  --paper: #E9ECE7;
-  --surface: #F7F8F5;
-  --surface-2: #DFE3DC;
-  --line: #CFD5CC;
-  --line-2: #B3BBB0;
-  --ink: #152030;
-  --slate: #384657;
-  --muted: #5A6676;
+  --paper: #ECEAE6;
+  --surface: #F8F7F4;
+  --surface-2: #E2DFD9;
+  --line: #D6D2CB;
+  --line-2: #BDB8AF;
+  --ink: #151515;
+  --slate: #3A3835;
+  --muted: #66625B;
 
-  --lime: #C8F04B;
-  --teal: #0B6E66;
-  --teal-2: #DDEFEB;
-  --focus: #0B6E66;
+  --now: #F7F4EC;
+  --link: #151515;
+  --link-bg: #E6E3DD;
+  --focus: #151515;
 
   --st-active-ink: #8A3E04; --st-active-bg: #FCE9D4; --st-active-mark: #E0731B;
-  --st-upcoming-ink: #075A53; --st-upcoming-bg: #DAEFEA; --st-upcoming-mark: #11907F;
-  --st-ended-ink: #4F5967; --st-ended-bg: #ECE8E0; --st-ended-mark: #98A1AC;
+  --st-upcoming-ink: #2B2926; --st-upcoming-bg: #E4E1DB; --st-upcoming-mark: #151515;
+  --st-ended-ink: #55524D; --st-ended-bg: #ECE8E0; --st-ended-mark: #A19D96;
   --st-stale-ink: #6B5000; --st-stale-bg: #F8EDC9; --st-stale-mark: #B8901A;
   --sev-yellow-ink: #614B00; --sev-yellow-bg: #F8EDB8; --sev-yellow-mark: #E2BC2C;
   --sev-orange-ink: #7F3300; --sev-orange-bg: #FBDFC6; --sev-orange-mark: #E86F17;
@@ -42,8 +43,8 @@
   --r-l: 14px;
   --gut: 16px;
   --wrap: 1200px;
-  --shadow: 0 1px 0 rgb(21 32 48 / 0.04), 0 1px 2px rgb(21 32 48 / 0.06);
-  --shadow-l: 0 12px 40px rgb(7 15 28 / 0.28);
+  --shadow: 0 1px 0 rgb(21 21 21 / 0.04), 0 1px 2px rgb(21 21 21 / 0.06);
+  --shadow-l: 0 12px 40px rgb(11 11 12 / 0.28);
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --t-fast: 120ms;
   --t: 200ms;

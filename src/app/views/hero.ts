@@ -28,7 +28,7 @@ export function mountStage(stage: HTMLElement): void {
   if (field) stage.classList.add("has-field"); else canvas.remove();
 }
 
-const SEV: Record<number, [number, number, number]> = { 4: [0.92, 0.32, 0.27], 3: [0.96, 0.55, 0.22], 2: [0.93, 0.8, 0.3], 1: [0.72, 0.83, 0.88] };
+const SEV: Record<number, [number, number, number]> = { 4: [0.92, 0.32, 0.27], 3: [0.96, 0.55, 0.22], 2: [0.93, 0.8, 0.3], 1: [0.8, 0.78, 0.73] };
 const CAT: Record<string, [number, number, number]> = { water: [0.36, 0.83, 0.92], transport: [0.72, 0.64, 1], roads: [0.98, 0.74, 0.36], power: [0.98, 0.9, 0.45] };
 
 /** Today's notices for the field: in force, or starting before the end of the local day. */
@@ -41,7 +41,7 @@ export function signalsFrom(rows: Row[], now: number): Signal[] {
       const rank = r.n.severity?.rank ?? 0;
       return {
         id: r.n.id,
-        color: rank ? SEV[rank]! : CAT[r.n.category] ?? [0.56, 0.83, 0.91],
+        color: rank ? SEV[rank]! : CAT[r.n.category] ?? [0.85, 0.82, 0.76],
         strength: r.st.unverified ? 0.45 : r.st.state === "upcoming" ? 0.6 : 1,
         count: (rank >= 3 ? 3 : rank === 2 ? 2 : 1) + (r.priority ? 1 : 0),
       };

@@ -1,17 +1,17 @@
 /* ——— The city board: a split-flap departure board ———
    Housing of brushed dark metal, flaps in two halves with a hinge line, characters in Inter at board weight.
-   Sizes are in cell units: --cw/--ch is one flap, --fs its character. Lime is "now", teal "later", grey "ended";
+   Sizes are in cell units: --cw/--ch is one flap, --fs its character. Bright white is "now", soft white "later", grey "ended";
    the square tile before each row is the issuer's severity (or the category, when there is no severity). */
 :root {
-  --flap-top: #2E3036;
-  --flap-top-2: #26282D;
-  --flap-bot: #222328;
-  --flap-bot-2: #1C1D21;
+  --flap-top: #303032;
+  --flap-top-2: #28282A;
+  --flap-bot: #222224;
+  --flap-bot-2: #1C1C1E;
   --flap-ink: #F1EEE6;
-  --flap-dim: #8C8F96;
-  --board: #0B0C0E;
-  --board-edge: #2A2C31;
-  --led: #C8F04B;
+  --flap-dim: #8E8A82;
+  --board: #0C0C0D;
+  --board-edge: #2C2C2E;
+  --led: #F7F4EC;
 }
 
 .board {
@@ -24,13 +24,13 @@
     var(--board);
   border: 1px solid var(--board-edge);
   box-shadow:
-    0 0 0 6px rgb(10 11 13 / 0.9), 0 0 0 7px rgb(255 255 255 / 0.05),
+    0 0 0 6px rgb(10 10 10 / 0.9), 0 0 0 7px rgb(255 255 255 / 0.05),
     0 50px 120px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.4),
     inset 0 1px 0 rgb(255 255 255 / 0.07);
   color: var(--flap-ink);
 }
 .bd-screw { position: absolute; top: 12px; width: 7px; height: 7px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #5B5E66, #1B1C20 70%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6); }
+  background: radial-gradient(circle at 35% 35%, #5E5C59, #1C1C1D 70%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.6); }
 .bd-screw::after { content: ""; position: absolute; left: 1px; right: 1px; top: 3px; height: 1px; background: rgb(0 0 0 / 0.7); rotate: 35deg; }
 .bd-screw.tl { left: 12px; } .bd-screw.tr { right: 12px; }
 
@@ -54,7 +54,7 @@
 /* the hinge: a dark gap across the middle and two pins at the sides */
 .fc::after { content: ""; position: absolute; z-index: 4; left: 0; right: 0; top: 50%; height: 1px; margin-top: -0.5px; background: rgb(0 0 0 / 0.75); pointer-events: none; }
 .c-title .fc::before, .c-clock .fc::before { content: ""; position: absolute; z-index: 5; left: -1px; right: -1px; top: 50%; height: 3px; margin-top: -1.5px;
-  background: linear-gradient(90deg, #3A3C42 0 2px, transparent 2px calc(100% - 2px), #3A3C42 calc(100% - 2px)); pointer-events: none; }
+  background: linear-gradient(90deg, #3C3B3A 0 2px, transparent 2px calc(100% - 2px), #3C3B3A calc(100% - 2px)); pointer-events: none; }
 .fc.blank .fh > span { opacity: 0; }
 .fc { box-shadow: 0 1px 0 rgb(0 0 0 / 0.6); border-radius: 3px; }
 .fc.turning { perspective: calc(var(--ch) * 9); }
@@ -69,9 +69,9 @@
 .c-clock { --cw: 36px; --ch: 56px; --fs: 38px; --gap: 3px; }
 .c-clock .fc:nth-child(3) .fh { background: transparent; }
 .c-clock .fc:nth-child(3)::after, .c-clock .fc:nth-child(3)::before { display: none; }
-.c-clock .fc:nth-child(3) .fh > span { color: var(--lime); }
+.c-clock .fc:nth-child(3) .fh > span { color: var(--now); }
 .bd-clockmeta { display: inline-flex; gap: 10px; align-items: baseline; font-size: 13px; color: var(--flap-dim); font-variant-numeric: tabular-nums; }
-.bd-sec { color: var(--lime); font-weight: 600; min-width: 2ch; }
+.bd-sec { color: var(--now); font-weight: 600; min-width: 2ch; }
 .bd-sec::before { content: ":"; opacity: 0.6; }
 
 .bd-plate { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin: 18px 0 18px; padding: 10px 14px;
@@ -100,25 +100,25 @@
 .bd-rows { display: grid; gap: 4px; padding: 10px 0 12px; }
 .br-link { display: flex; align-items: center; gap: var(--colgap); padding: 5px 10px; margin: 0 -10px; border-radius: 8px; color: inherit; text-decoration: none; transition: background var(--t) var(--ease); }
 a.br-link[href]:hover, a.br-link[href]:focus-visible { background: rgb(255 255 255 / 0.045); }
-a.br-link[href]:focus-visible { outline: 2px solid var(--lime); outline-offset: 0; }
+a.br-link[href]:focus-visible { outline: 2px solid var(--now); outline-offset: 0; }
 .br-time { display: inline-flex; gap: 10px; flex: none; }
 .c-to .fh > span { color: var(--flap-dim); }
-.br-tile { flex: none; width: var(--cw); height: var(--ch); border-radius: 3px; background: var(--c, #2A2B30);
+.br-tile { flex: none; width: var(--cw); height: var(--ch); border-radius: 3px; background: var(--c, #2A2A2C);
   box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.25); position: relative; transition: background 400ms var(--ease); }
 .br-tile::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgb(0 0 0 / 0.45); }
-.br.empty .br-tile { background: #1F2024; box-shadow: none; }
-.br.t-now .c-status .fh > span { color: var(--lime); }
-.br.t-next .c-status .fh > span { color: #5ED3C0; }
+.br.empty .br-tile { background: #202022; box-shadow: none; }
+.br.t-now .c-status .fh > span { color: #FFFFFF; text-shadow: 0 0 10px rgb(255 255 255 / 0.55); }
+.br.t-next .c-status .fh > span { color: #C9C3B7; }
 .br.t-ended .fh > span { color: var(--flap-dim); }
 .br.t-ended .br-tile { filter: saturate(0.3) brightness(0.7); }
-.br.t-msg .c-what .fh > span, .br.t-msg .c-where .fh > span { color: #FFD989; }
+.br.t-msg .c-what .fh > span, .br.t-msg .c-where .fh > span { color: #DCD6CA; }
 .br-track { position: relative; flex: 1; min-width: 120px; height: 8px; border-radius: 8px; background: rgb(255 255 255 / 0.06); }
 .br-bar { position: absolute; top: 0; bottom: 0; border-radius: 8px; background: var(--c, var(--sky)); box-shadow: 0 0 12px color-mix(in srgb, var(--c, var(--sky)) 50%, transparent); }
 .br-bar.open { background: linear-gradient(90deg, var(--c, var(--sky)) 55%, transparent); border-radius: 8px 0 0 8px; }
 .br.t-ended .br-bar { opacity: 0.35; box-shadow: none; }
-.br-now { position: absolute; top: -4px; bottom: -4px; left: var(--now); width: 2px; margin-left: -1px; border-radius: 2px; background: var(--lime); box-shadow: 0 0 8px rgb(200 240 75 / 0.8); }
+.br-now { position: absolute; top: -5px; bottom: -5px; left: var(--at); width: 3px; margin-left: -1.5px; border-radius: 2px; background: #FFFFFF; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6), 0 0 10px rgb(255 255 255 / 0.9); }
 .br.empty .br-now { opacity: 0.25; }
-.br.loading .fh > span { color: #A9AEB6; }
+.br.loading .fh > span { color: #AAA69E; }
 
 /* ——— foot and the LED strip ——— */
 .bd-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; padding: 12px 0 14px; border-top: 1px solid rgb(255 255 255 / 0.06); }
@@ -131,10 +131,10 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--lime); outline-offset: 
 .bd-led:empty { display: none; }
 .board .ticker {
   display: flex; align-items: center; min-height: 48px; border-radius: 0 0 19px 19px; overflow: hidden;
-  background: radial-gradient(100% 140% at 50% 0%, #0E0F10, #060607); box-shadow: inset 0 10px 18px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(0 0 0 / 0.9);
+  background: radial-gradient(100% 140% at 50% 0%, #0E0E0E, #060607); box-shadow: inset 0 10px 18px rgb(0 0 0 / 0.65), inset 0 1px 0 rgb(0 0 0 / 0.9);
   border-top: 1px solid #000;
 }
-.board .tk-tag { align-self: stretch; display: inline-flex; align-items: center; gap: 9px; padding: 0 18px 0 30px; flex: none; font-size: 12px; font-weight: 650; color: var(--flap-dim); background: #08090A; box-shadow: 16px 0 16px -4px #060607; position: relative; z-index: 1; }
+.board .tk-tag { align-self: stretch; display: inline-flex; align-items: center; gap: 9px; padding: 0 18px 0 30px; flex: none; font-size: 12px; font-weight: 650; color: var(--flap-dim); background: #080808; box-shadow: 16px 0 16px -4px #060607; position: relative; z-index: 1; }
 .board .tk-live { width: 8px; height: 8px; border-radius: 50%; background: var(--led); box-shadow: 0 0 10px var(--led); animation: beat 2.2s ease-out infinite; }
 .board .tk-view { flex: 1; min-width: 0; overflow: hidden; }
 /* dot-matrix: the moving text is seen through a grid of round LEDs */
@@ -144,12 +144,12 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--lime); outline-offset: 
   mask-image: radial-gradient(circle, #000 1.05px, transparent 1.35px); mask-size: 3px 3px;
 }
 .board .ticker:hover .tk-track, .board .ticker:focus-within .tk-track { animation-play-state: paused; -webkit-mask-image: none; mask-image: none; }
-.board .tk-item a { display: inline-flex; align-items: center; gap: 12px; padding: 13px 26px 13px 14px; white-space: nowrap; text-decoration: none; font: 800 17px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--led); text-shadow: 0 0 10px rgb(200 240 75 / 0.55); }
+.board .tk-item a { display: inline-flex; align-items: center; gap: 12px; padding: 13px 26px 13px 14px; white-space: nowrap; text-decoration: none; font: 800 17px/1 var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--led); text-shadow: 0 0 10px rgb(247 244 236 / 0.55); }
 .board .tk-item a:hover, .board .tk-item a:focus-visible { color: #fff; }
 .board .tk-dot { width: 10px; height: 10px; border-radius: 2px; background: var(--c); box-shadow: 0 0 10px var(--c); }
-.board .tk-pub { color: #9DB43F; font-size: 15px; font-weight: 700; }
+.board .tk-pub { color: #A9A399; font-size: 15px; font-weight: 700; }
 .board .tk-head { font-weight: 800; }
-.board .tk-when { color: #FFD989; font-size: 15px; text-shadow: 0 0 10px rgb(255 217 137 / 0.5); }
+.board .tk-when { color: #DCD6CA; font-size: 15px; text-shadow: 0 0 10px rgb(220 214 202 / 0.5); }
 .board .ticker.quiet { padding: 0 30px; }
 .board .tk-quiet { color: var(--flap-dim); font-size: 14px; padding: 14px 0; }
 
@@ -174,8 +174,8 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--lime); outline-offset: 
 .board.narrow .c-to { display: none; }
 .board.narrow .br-link { flex-wrap: wrap; row-gap: 6px; padding: 6px 8px; margin: 0 -8px; }
 .board.narrow .br-track { flex-basis: 100%; height: 4px; min-width: 0; }
-.board.narrow .br.t-now .c-from .fh > span { color: var(--lime); }
-.board.narrow .br.t-next .c-from .fh > span { color: #5ED3C0; }
+.board.narrow .br.t-now .c-from .fh > span { color: var(--now); }
+.board.narrow .br.t-next .c-from .fh > span { color: #C9C3B7; }
 .board.narrow .bd-led { margin: 0 -14px; }
 .board.narrow .ticker { border-radius: 0 0 15px 15px; }
 .board.narrow .tk-tag { padding-left: 14px; }
@@ -188,22 +188,22 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--lime); outline-offset: 
 }
 
 /* a row that is new since your last visit: its tile blinks a few times, like a board announcing a change */
-.br.fresh .br-tile { animation: tile-blink 900ms steps(2, jump-none) 1.2s 4; }
-@keyframes tile-blink { 50% { background: var(--lime); box-shadow: 0 0 14px var(--lime); } }
+.br.br-new .br-tile { animation: tile-blink 900ms steps(2, jump-none) 1.2s 4; }
+@keyframes tile-blink { 50% { background: var(--now); box-shadow: 0 0 14px var(--now); } }
 
 /* ——— the notice's ticket: its board row, close up, at the top of the notice view ——— */
 .ticket {
   --cw: 22px; --ch: 36px; --fs: 24px; --gap: 2px;
   display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin: -18px -22px 18px; padding: 16px 22px 18px;
-  background: radial-gradient(120% 120% at 50% -30%, #1A1B1F, var(--board)); color: var(--flap-ink); border-bottom: 1px solid #000;
+  background: radial-gradient(120% 120% at 50% -30%, #1B1B1C, var(--board)); color: var(--flap-ink); border-bottom: 1px solid #000;
 }
 .ticket .tk-col { display: grid; gap: 6px; }
 .ticket .tk-l { font-size: 12px; color: var(--flap-dim); }
 .ticket .tk-arrow { width: 22px; height: 2px; margin-bottom: 17px; background: var(--flap-dim); position: relative; }
 .ticket .tk-arrow::after { content: ""; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left: 7px solid var(--flap-dim); border-right: 0; }
 .ticket .br-tile { --cw: 22px; --ch: 36px; margin-left: auto; }
-.ticket.t-now .c-status .fh > span { color: var(--lime); }
-.ticket.t-next .c-status .fh > span { color: #5ED3C0; }
+.ticket.t-now .c-status .fh > span { color: var(--now); }
+.ticket.t-next .c-status .fh > span { color: #C9C3B7; }
 .ticket.t-ended .fh > span { color: var(--flap-dim); }
 @media (max-width: 560px) { .ticket { --cw: 17px; --ch: 30px; --fs: 19px; margin: -18px -22px 16px; } .ticket .br-tile { display: none; } }
 

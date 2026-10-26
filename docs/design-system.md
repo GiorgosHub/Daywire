@@ -6,11 +6,13 @@ there to fill space.
 
 **The city board.** The hero is a split-flap departure board for your place. It sits in front of the city at night,
 which is drawn live. The vernacular of public real-time information (station boards, LED strips, timetables) is the
-design language. The page you read is a sheet of cool concrete-grey paper laid over the city, and its notices are
+design language. The page you read is a sheet of warm grey paper laid over the city, and its notices are
 set as a timetable.
 
-**Lime marks "now" and focus, and nothing else.** It is deliberately not yellow, orange or red, because those belong
-to the issuers' warning levels.
+**Colour is kept for what matters.** The night and the board are graphite black (never blue), the flaps and "now"
+are warm white, and the paper is warm grey with black ink. The only hues on the page are the issuers' warning levels
+(yellow, orange, red), the categories (water, roads, transport, power), and status marks, which always come with words.
+That is how a real station board works, and it makes a warning the brightest thing on the screen.
 
 ## Tokens
 
@@ -21,15 +23,15 @@ night/motion layer.
 
 | Role | Token | Value | Use |
 |---|---|---|---|
-| Night | `--navy-950` / `--navy-900` | #070F1C / #0C1A2E | hero, ticker, footer, compact bar |
-| Paper (concrete) | `--paper` / `--surface` | #E9ECE7 / #F7F8F5 | the sheet, panels |
+| Night | `--night-950` / `--night-900` | #0B0B0C / #121213 | hero, footer, compact bar (graphite, no blue) |
+| Paper | `--paper` / `--surface` | #ECEAE6 / #F8F7F4 | the sheet, panels (warm grey) |
 | Board | `--board`, `--flap-top*`, `--flap-bot*`, `--flap-ink`, `--flap-dim`, `--led` | #0B0C0E … | the split-flap board, the ticket, the footer mark |
-| Ink | `--ink` / `--slate` / `--muted` | #152030 / #384657 / #5A6676 | text on paper, from strong to quiet |
-| Now | `--lime` | #C8F04B | the current time, the live pulse, focus on the night |
+| Ink | `--ink` / `--slate` / `--muted` | #151515 / #3A3835 / #66625B | text on paper, from strong to quiet; links and focus are ink too |
+| Now | `--now` | #F7F4EC | the current time, the live pulse, focus on the night (warm white; the board's own "now" mark is pure white) |
 | Status | `--st-{active,upcoming,ended,stale}-{ink,bg,mark}` | — | status chips and marks only, always with words |
 | Severity | `--sev-{yellow,orange,red}-{ink,bg,mark}` | — | the issuer's own level, never our own |
 | Data on night | `--sevN-on-dark`, `--{water,roads,transport,power}-on-dark`, `--now-on-dark`, `--next-on-dark` | — | bars, dots and lights over the city |
-| Light on night | `--night-veil`, `--night-veil-2`, `--night-veil-3`, `--lime-glow`, `--glass`, `--glass-line` | — | lines, glass panels, glows |
+| Light on night | `--night-veil`, `--night-veil-2`, `--night-veil-3`, `--now-glow`, `--glass`, `--glass-line` | — | lines, glass panels, glows |
 
 `hero.ts` (`SEV`, `CAT`) mirrors the on-dark data colours for the WebGL lights. Change both together.
 

@@ -21,7 +21,7 @@ export function countTo(el: HTMLElement, key: string, to: number, fmt: (n: numbe
 
 export function burst(x: number, y: number, n = 14): void {
   if (reducedMotion()) return;
-  const C = ["#C8F04B", "#8FD3E8", "#FFFFFF", "#11907F"];
+  const C = ["#F7F4EC", "#CFC8BA", "#FFFFFF", "#151515"];
   for (let i = 0; i < n; i++) {
     const s = document.createElement("i");
     s.className = "spark";

@@ -8,7 +8,7 @@ export interface GlobePoint { id: string; lat: number; lon: number; kind: "cover
 export interface Globe { setPoints(p: GlobePoint[]): void; focus(lat: number, lon: number, id?: string): void; dispose(): void }
 
 const RAD = Math.PI / 180;
-const COLORS: Record<GlobePoint["kind"], string> = { covered: "#C8F04B", saved: "#11907F", result: "#E8EEF5", current: "#C8F04B" };
+const COLORS: Record<GlobePoint["kind"], string> = { covered: "#F7F4EC", saved: "#151515", result: "#F4F1EA", current: "#F7F4EC" };
 
 export function mountGlobe(canvas: HTMLCanvasElement): Globe {
   const ctx = canvas.getContext("2d")!;
@@ -35,9 +35,9 @@ export function mountGlobe(canvas: HTMLCanvasElement): Globe {
     const R = Math.min(w, h) * 0.42, cx = w / 2, cy = h / 2;
     ctx.clearRect(0, 0, w, h);
     const g = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.1, cx, cy, R);
-    g.addColorStop(0, "#1E3657"); g.addColorStop(1, "#0A1628");
+    g.addColorStop(0, "#2A2A2D"); g.addColorStop(1, "#0E0E0F");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = 1 * k; ctx.strokeStyle = "rgba(169,182,198,.18)";
+    ctx.lineWidth = 1 * k; ctx.strokeStyle = "rgba(168,164,156,.18)";
     const line = (pts: { x: number; y: number; front: boolean }[]) => {
       ctx.beginPath(); let pen = false;
       for (const p of pts) { if (!p.front) { pen = false; continue; } if (pen) ctx.lineTo(p.x, p.y); else { ctx.moveTo(p.x, p.y); pen = true; } }
@@ -45,7 +45,7 @@ export function mountGlobe(canvas: HTMLCanvasElement): Globe {
     };
     for (let la = -60; la <= 60; la += 30) line(Array.from({ length: 73 }, (_, i) => project(la, i * 5 - 180, R, cx, cy)));
     for (let lo = -180; lo < 180; lo += 30) line(Array.from({ length: 37 }, (_, i) => project(i * 5 - 90, lo, R, cx, cy)));
-    ctx.strokeStyle = "rgba(200,240,75,.35)"; ctx.lineWidth = 1.2 * k;
+    ctx.strokeStyle = "rgba(247,244,236,.35)"; ctx.lineWidth = 1.2 * k;
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
     const sorted = [...points].sort((a, b) => project(a.lat, a.lon, R, cx, cy).depth - project(b.lat, b.lon, R, cx, cy).depth);
     for (const p of sorted) {
@@ -55,7 +55,7 @@ export function mountGlobe(canvas: HTMLCanvasElement): Globe {
       const r = (focused ? 5 : p.kind === "result" ? 2.6 : 3.4) * k;
       if (focused || p.kind === "current") {
         const pulse = reducedMotion() ? 0.5 : (Math.sin(t * 3) + 1) / 2;
-        ctx.fillStyle = `rgba(200,240,75,${0.15 + pulse * 0.2})`;
+        ctx.fillStyle = `rgba(247,244,236,${0.15 + pulse * 0.2})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r * (2.4 + pulse), 0, Math.PI * 2); ctx.fill();
       }
       ctx.fillStyle = COLORS[p.kind]; ctx.globalAlpha = 0.45 + q.depth * 0.55;
