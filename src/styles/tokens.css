@@ -1,8 +1,7 @@
 /* DAYWIRE tokens. Navy is the city at night (header and hero only); off-white paper is the day you read on.
    Lime marks "now" and focus, nothing else. Status colours appear only on status. */
-@font-face { font-family: "Inter"; src: url("/fonts/Inter-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
-@font-face { font-family: "Inter"; src: url("/fonts/Inter-SemiBold.woff") format("woff"); font-weight: 600; font-display: swap; }
-@font-face { font-family: "Inter Display"; src: url("/fonts/InterDisplay-Bold.woff") format("woff"); font-weight: 700; font-display: swap; }
+/* One variable family (Inter, OFL), weights 100–900: the headline's weight is animated when the city switches on. */
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-var.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 
 :root {
   --navy-950: #070F1C;
@@ -36,7 +35,7 @@
   --sev-red-ink: #861B14; --sev-red-bg: #F7D6D2; --sev-red-mark: #D2362B;
 
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
-  --display: "Inter Display", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --display: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --r-s: 6px;
   --r: 10px;

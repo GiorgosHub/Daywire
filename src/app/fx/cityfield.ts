@@ -4,6 +4,8 @@
 //   category; hovering a notice in the page lights its pulses. With no notices there are no pulses, only a slow sweep.
 // - The light of the scene follows the sun at that place (computed, not decorative).
 // - It is labelled on the page as an abstract picture: it is not a map and its streets are not real streets.
+// - Switching on (Giannotas' sign, an x-ray scan): on first view and on each new city, a scanner crosses the
+//   dark grid left to right, the streets light up behind it, and then each notice's light comes on in turn.
 // Reduced motion: one still frame. No WebGL2: the CSS background stays (the page never depends on this).
 import { clamp, frame, lerp, reducedMotion } from "./loop.ts";
 
@@ -15,6 +17,10 @@ export interface Field {
   setDaylight(d: number): void;
   highlight(id: string | null): void;
   ripple(clientX: number, clientY: number): void;
+  /** Run the switch-on: scan, then the lights one by one. */
+  boot(): void;
+  /** Stop drawing while the page covers the field (it keeps its state). */
+  setActive(on: boolean): void;
   dispose(): void;
 }
 
@@ -27,6 +33,7 @@ uniform vec2 uRes; uniform float uT; uniform vec3 uM;
 uniform float uSA, uSB, uMix, uDay, uSweep;
 uniform vec4 uP[32]; uniform vec3 uC[32]; uniform int uN;
 uniform vec4 uR;
+uniform float uScan;
 out vec4 o;
 float h21(vec2 p){ p = fract(p*vec2(123.34,456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
 float nz(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.-2.*f);
@@ -69,10 +76,13 @@ void main(){
   float torch = exp(-dm*dm*.05) * uM.z;
   vec3 navy = mix(vec3(.024,.052,.098), vec3(.055,.105,.18), uDay);
   vec3 lineCol = mix(vec3(.42,.55,.78), vec3(.6,.72,.86), uDay);
-  float light = 1. + torch*2.6 + ring*3. + sweep;
-  vec3 col = navy + lineCol * (streets*.07 + avenues*.12 + cont*.03) * light + vec3(.78,.94,.3) * ring * streets * .25;
-  col += glow;
   vec2 uv = fc / uRes;
+  // the switch-on: streets behind the scanner are lit, ahead of it they are still dark
+  float lit = uScan < 0. ? 1. : mix(.18, 1., smoothstep(uScan + .02, uScan - .06, uv.x));
+  float scan = uScan < 0. ? 0. : exp(-pow((uv.x - uScan)*26., 2.));
+  float light = (1. + torch*2.6 + ring*3. + sweep*lit) * lit + scan*4.;
+  vec3 col = navy + lineCol * (streets*.07 + avenues*.12 + cont*.03) * light + vec3(.78,.94,.3) * (ring * streets * .25 + scan * (streets*.5 + .05));
+  col += glow;
   col *= .72 + .28*smoothstep(1.25, .15, length((uv - vec2(.72, .62)) * vec2(1., 1.5)));
   col = mix(col, vec3(.047,.102,.18), smoothstep(.25, 0., uv.y) * .55);
   o = vec4(col, 1.);
@@ -103,7 +113,7 @@ export function mountField(canvas: HTMLCanvasElement): Field | null {
   gl.enableVertexAttribArray(loc);
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const U = (n: string) => gl.getUniformLocation(prog, n);
-  const u = { res: U("uRes"), t: U("uT"), m: U("uM"), sa: U("uSA"), sb: U("uSB"), mix: U("uMix"), day: U("uDay"), sweep: U("uSweep"), p: U("uP"), c: U("uC"), n: U("uN"), r: U("uR") };
+  const u = { res: U("uRes"), t: U("uT"), m: U("uM"), sa: U("uSA"), sb: U("uSB"), mix: U("uMix"), day: U("uDay"), sweep: U("uSweep"), p: U("uP"), c: U("uC"), n: U("uN"), r: U("uR"), scan: U("uScan") };
 
   let seedA = 0, seedB = 0, mixV = 1, mixTarget = 1, day = 0.5, dayTarget = 0.5;
   let signals: Signal[] = [];
@@ -112,7 +122,9 @@ export function mountField(canvas: HTMLCanvasElement): Field | null {
   const boost: number[] = [];
   const mouse = { x: -9999, y: -9999, on: 0, target: 0 };
   let ripple = { x: 0, y: 0, t0: -99, on: 0 };
-  let visible = true, t = 0, lastDraw = 0;
+  let visible = true, active = true, t = 0, lastDraw = 0;
+  let bootT = -99;            // when the current switch-on started (field time), -99 = none running
+  const SCAN = 1.5, LIGHT_GAP = 0.2;
   const P = new Float32Array(32 * 4), C = new Float32Array(32 * 3);
   const SCALE = 9;
 
@@ -145,7 +157,7 @@ export function mountField(canvas: HTMLCanvasElement): Field | null {
       const span = p.axis === 0 ? spanX : spanY;
       const pos = (((p.phase + t * p.speed * p.dir) % span) + span) % span - 2;
       const sig = signals[p.sig]!;
-      const b = boost[p.sig] ?? 1;
+      const b = (boost[p.sig] ?? 1) * switchOn(p.sig);
       P[i * 4] = p.axis === 0 ? pos : p.lane;
       P[i * 4 + 1] = p.axis === 0 ? p.lane : pos;
       P[i * 4 + 2] = sig.strength * b;
@@ -161,14 +173,24 @@ export function mountField(canvas: HTMLCanvasElement): Field | null {
     gl.uniform1f(u.sweep, reducedMotion() ? 0.3 : (t * 0.018) % 1);
     gl.uniform4fv(u.p, P); gl.uniform3fv(u.c, C); gl.uniform1i(u.n, pulses.length);
     gl.uniform4f(u.r, ripple.x * k, h - ripple.y * k, ripple.t0, ripple.on);
+    const since = t - bootT;
+    gl.uniform1f(u.scan, since >= 0 && since < SCAN ? -0.08 + (since / SCAN) * 1.2 : -1);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /** 0 → 1 as a notice's light comes on after the scan, with a short flare as it does. */
+  function switchOn(si: number): number {
+    const since = t - bootT - SCAN * 0.7 - si * LIGHT_GAP;
+    if (bootT < 0 || since > 2) return 1;
+    if (since < 0) return 0;
+    return clamp(since / 0.25) * (1 + 1.6 * Math.exp(-since * 4));
   }
 
   const io = typeof IntersectionObserver !== "undefined" ? new IntersectionObserver(([e]) => { visible = Boolean(e?.isIntersecting); }) : null;
   io?.observe(canvas);
 
   const stop = frame((now, dt) => {
-    if (!visible || !canvas.isConnected) return;
+    if (!visible || !active || !canvas.isConnected) return;
     if (reducedMotion()) { if (now - lastDraw > 1000) { lastDraw = now; mixV = mixTarget; day = dayTarget; draw(); } return; }
     t += dt;
     mixV = lerp(mixV, mixTarget, clamp(dt * 1.6));
@@ -200,6 +222,8 @@ export function mountField(canvas: HTMLCanvasElement): Field | null {
     setDaylight(d) { dayTarget = clamp(d); if (reducedMotion()) { day = dayTarget; draw(); } },
     highlight(id) { hi = id; },
     ripple(x, y) { const r = canvas.getBoundingClientRect(); ripple = { x: x - r.left, y: y - r.top, t0: t, on: 1 }; },
+    boot() { if (!reducedMotion()) bootT = t; },
+    setActive(on) { active = on; },
     dispose() { stop(); ro?.disconnect(); io?.disconnect(); hostEl.removeEventListener("pointermove", move); hostEl.removeEventListener("pointerleave", leave); gl.getExtension("WEBGL_lose_context")?.loseContext(); },
   };
 }

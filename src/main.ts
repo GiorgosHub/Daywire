@@ -1,6 +1,8 @@
 // DAYWIRE client: pick a location, load its feed, render the current route, keep statuses current.
 // Routes: #/ (home), #/n/<notice id> (detail), #/sources, #/at/gn:<GeoNames id> (open a location by link).
 // The shell (the city field behind the hero, the compact bar) is built once; regions inside it re-render.
+// Scroll: the city holds still while the page, a paper sheet, slides over it (teleia's pinned scenes); the compact
+// bar takes over once it is covered and hides while you scroll down (Giannotas' header).
 import { FEATURED } from "./domain/localities.ts";
 import type { Feed, GeoLocation } from "./domain/types.ts";
 import { rows } from "./domain/view.ts";
@@ -14,6 +16,8 @@ import { openDetail } from "./app/views/detail.ts";
 import { openLocations, openPrefs } from "./app/views/dialogs.ts";
 import { feedField, fieldApi, hero, liveClock, mountStage, startClocks } from "./app/views/hero.ts";
 import { banners, feedBody } from "./app/views/home.ts";
+import { railFor, railUpdate } from "./app/views/rail.ts";
+import { ticker } from "./app/views/ticker.ts";
 import { sourcesPage } from "./app/views/sources.ts";
 
 const app = document.getElementById("app")!;
@@ -26,8 +30,11 @@ const top = h("header", { class: "top" }, bar, heroSlot);
 const shell = h("div", { class: "shell" }, stage, top);
 const mainEl = h("main", { id: "main", class: "wrap main", tabindex: "-1" });
 const footSlot = h("div");
-const sheet = h("div", { class: "sheet" }, mainEl);
+const tickSlot = h("div", { class: "tick-slot" });
+const sheet = h("div", { class: "sheet" }, tickSlot, mainEl);
 const compact = h("div", { class: "compact", "aria-hidden": "true" });
+const railSlot = h("div", { class: "rail-slot" });
+let rail: HTMLElement | null = null;
 
 function brand(): HTMLElement {
   return h("a", { class: "brand", href: "#/", "aria-label": "DAYWIRE" }, h("span", { class: "b-day" }, "DAY"),
@@ -105,10 +112,14 @@ function render(): void {
     clear(compact); compact.append(...compactContent());
     clear(mainEl);
     mainEl.append(...banners());
-    if (route.startsWith("/sources")) mainEl.append(sourcesPage());
+    const onSources = route.startsWith("/sources");
+    if (onSources) mainEl.append(sourcesPage());
     else mainEl.append(feedBody(all, t0));
+    clear(tickSlot); const tk = onSources ? null : ticker(all, t0); if (tk) tickSlot.append(tk);
+    clear(railSlot); rail = onSources ? null : railFor(mainEl); if (rail) railSlot.append(rail);
     clear(footSlot); footSlot.append(footer());
     feedField(S.feed, all, t0);
+    measure();
     document.title = route.startsWith("/sources") ? `${M().sourcesTitle} · DAYWIRE` : S.current ? `${tx(S.current.name)} · DAYWIRE` : "DAYWIRE";
   });
 }
@@ -171,27 +182,45 @@ async function locationFromLink(): Promise<GeoLocation | undefined> {
   } catch { return undefined; }
 }
 
-/** First visit in a session: the wire draws itself, then the city opens. Never blocks input. */
-function intro(): void {
-  let seen = false;
-  try { seen = sessionStorage.getItem("daywire:intro") === "1"; sessionStorage.setItem("daywire:intro", "1"); } catch { /* storage blocked */ }
-  if (seen || reducedMotion()) return;
-  const el = h("div", { class: "intro", "aria-hidden": "true" }, h("div", { class: "intro-mark" }, h("span", {}, "DAY"), svgPulse(), h("span", {}, "WIRE")));
-  document.body.append(el);
-  setTimeout(() => el.classList.add("out"), 1050);
-  setTimeout(() => el.remove(), 1800);
+// ——— scroll: pin the city, slide the sheet over it, hand over to the compact bar ———
+let heroH = 0, pinStart = 0, lastY = -1, ticking = false;
+function measure(): void {
+  heroH = shell.offsetHeight;
+  pinStart = Math.max(0, heroH - innerHeight);
+  // a hero taller than the window scrolls until its bottom shows, then holds
+  shell.style.setProperty("--pin-top", `${-pinStart}px`);
+  onScroll();
+}
+function onScroll(): void {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    ticking = false;
+    const y = scrollY;
+    const p = heroH > pinStart ? Math.min(1, Math.max(0, (y - pinStart) / (heroH - pinStart))) : 0;
+    shell.style.setProperty("--p", p.toFixed(3));
+    fieldApi()?.setActive(p < 0.995);
+    const root = document.documentElement;
+    const scrolled = y > heroH - 72;
+    root.classList.toggle("scrolled", scrolled);
+    // the first reading (e.g. a reload half-way down) shows the bar; after that, down hides it and up brings it back
+    if (!scrolled || lastY < 0) root.classList.remove("bar-away");
+    else if (y > lastY + 6) root.classList.add("bar-away");
+    else if (y < lastY - 6) root.classList.remove("bar-away");
+    lastY = y;
+    railUpdate(rail, mainEl);
+  });
 }
 
 function installShell(): void {
   app.append(shell, sheet, footSlot);
-  document.body.append(compact);
+  document.body.append(compact, railSlot);
   mountStage(stage);
   startClocks();
   installPointerFx();
-  // the compact bar appears once the hero has scrolled away
-  if (typeof IntersectionObserver !== "undefined") {
-    new IntersectionObserver(([e]) => document.documentElement.classList.toggle("scrolled", !e!.isIntersecting), { rootMargin: "-64px 0px 0px 0px" }).observe(heroSlot);
-  }
+  addEventListener("scroll", onScroll, { passive: true });
+  addEventListener("resize", measure);
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(measure).observe(shell);
   // a touch on the city sends a ring through its streets
   shell.addEventListener("pointerdown", (e) => { if (!(e.target as Element).closest("a,button,input,select,label")) fieldApi()?.ripple(e.clientX, e.clientY); });
 }
@@ -199,7 +228,6 @@ function installShell(): void {
 async function start(): Promise<void> {
   setLang(S.prefs.lang);
   document.documentElement.classList.add("js");
-  intro();
   if (S.prefs.lastVisit) S.previousVisit = Date.parse(S.prefs.lastVisit);
   const q = new URLSearchParams(location.search);
   if (q.get("now")) S.nowOverride = Date.parse(q.get("now")!); // honoured only for fixture data (see state.now)

@@ -72,13 +72,18 @@ docs/           sources, data model and rules, ADR-001 (architecture), ADR-002 (
 ```
 
 ## Design and motion
-The hero sits on a city at night drawn live in WebGL2 (`src/app/fx/cityfield.ts`). It is an abstract city, not a
-map, and the page says so. Its only lights are the notices that are in force or due today, coloured by the issuer's
-severity, and its light follows the real sun at that place (computed in `src/domain/sun.ts`). "Today" is drawn as a
-24-hour wire in the place's own time zone, with daylight from sunrise to sunset and a line for now. The page
-content is a paper sheet laid over the city. Places switch through an opening circle (View Transitions), the
-location picker shows a globe, and cards, sections and numbers settle in as they appear. Without WebGL there is a
-quiet CSS sky; with reduced motion everything is still and complete.
+The hero is a city at night, drawn live in WebGL2 (`src/app/fx/cityfield.ts`). It is an abstract city, not a map, and
+the page says so. Its only lights are the notices in force or due today, in the issuer's severity colours, and its
+light follows the real sun at that place.
+
+When a place opens, the city **switches on**: a scanner crosses the dark streets and the lights come on one by one,
+while the headline turns from thin to full weight (variable Inter). Today's notices then run along **the wire**, a
+ticker where the city meets the page. The city **holds still while the paper sheet slides over it**. The sheet shows:
+- cards for notices in force, each with a **live strip** of how much of its stated time has passed;
+- on wide screens, a **rail** of the page's sections with a pulse at your reading position.
+
+Without WebGL there is a quiet CSS sky. With reduced motion everything is still and complete. Tokens, components,
+the motion inventory and the rules are in [docs/design-system.md](docs/design-system.md).
 
 ## Known limits
 - **Freshness depends on traffic.** Sources are read when a location is opened, at most once per 5-minute CDN window per location. There is no scheduled job.

@@ -99,11 +99,12 @@ try {
     assert((await page.textContent(".ov-for")).includes("Γιάννουλη"), "persisted");
   });
   await check("London: second saved location, its own coverage, time zone and transport", async () => {
+    await page.evaluate(() => scrollTo(0, 0));
     await page.click(".place-btn");
     await page.fill("#loc-q", "London");
     await page.waitForSelector("#loc-results .loc-opt");
     await page.click("#loc-results .loc-opt >> nth=0");
-    await page.waitForSelector(".coverage", { timeout: 15000 });
+    await page.waitForFunction(() => document.querySelector(".pb-name")?.textContent?.includes("Λονδίνο") && document.querySelector(".coverage"), null, { timeout: 15000 });
     assert((await page.textContent(".coverage")).includes("Μερική κάλυψη"), "partial");
     assert((await page.locator(".card.cat-transport").count()) === 3, "three TfL lines with problems");
     assert((await page.textContent(".wire-now")).includes("GMT"), "London's zone is named for a viewer in Athens");
@@ -154,6 +155,22 @@ try {
     await page.evaluate(() => scrollTo(0, 0));
     await page.click(".loc-chip:not([aria-current])");
     await page.waitForFunction((b) => document.querySelector(".pb-name")?.textContent === b && document.querySelector(".coverage"), before, { timeout: 15000 });
+    // the wire ticker: only real notices, each a link to its detail; the looping copies are out of the tab order
+    const tk = await page.evaluate(() => [...document.querySelectorAll(".ticker .tk-item a")].map((a) => [a.getAttribute("href"), a.getAttribute("tabindex"), a.closest("li").getAttribute("aria-hidden")]));
+    assert(tk.length > 0 && tk.every(([h]) => h.startsWith("#/n/")), "ticker links");
+    assert(tk.filter(([, t, hid]) => t === null && hid === null).length >= 1 && tk.filter(([, t]) => t === "-1").every(([, , hid]) => hid === "true"), "copies hidden");
+    const ids = new Set(await page.evaluate(() => [...document.querySelectorAll(".card")].map((c) => c.dataset.id)));
+    assert(tk.every(([h]) => ids.has(decodeURIComponent(h.slice(4)))), "every ticker item is a notice on the page");
+    // live strips only on notices in force with a stated start and end
+    const strips = await page.evaluate(() => [...document.querySelectorAll(".card .strip")].map((s) => s.closest(".card").className));
+    assert(strips.length > 0 && strips.every((c) => c.includes("st-active")), strips.join("|"));
+    // the rail has one stop per section and takes you there
+    await page.evaluate(() => scrollTo(0, 1400)); await page.waitForTimeout(400);
+    const stops = await page.locator(".rail .rl-stop").count();
+    assert(stops === (await page.locator("section.sec[id]").count()), "one stop per section");
+    await page.locator(".rail .rl-stop").last().click();
+    await page.waitForTimeout(1200);
+    assert(await page.evaluate(() => { const s = [...document.querySelectorAll("section.sec[id]")].pop(); const t = s.getBoundingClientRect().top; return t > -40 && t < innerHeight - 60; }), "rail stop scrolls to its section");
   });
   await check("no browser console errors", async () => { assert(errors.length === 0, errors.join(" | ")); });
   await ctx.close();

@@ -47,11 +47,14 @@ export function signalsFrom(rows: Row[], now: number): Signal[] {
     });
 }
 
+let bootedFor = "";
 export function feedField(f: Feed | undefined, rows: Row[], now: number): void {
   if (!field) return;
   const loc = f?.location ?? S.current;
   if (loc) {
     field.setSeed(loc.geonameId);
+    // a new place switches on: the scan crosses its streets, then its notices light up one by one
+    if (loc.id !== bootedFor) { bootedFor = loc.id; field.boot(); }
     const alt = sunAltitude(now, loc.lat, loc.lon);
     field.setDaylight((alt + 8) / 26);
   }
@@ -101,12 +104,12 @@ export function hero(all: Row[], now: number): HTMLElement {
   };
 
   const copy = h("div", { class: "hero-copy" },
-    loc ? h("p", { class: "eyebrow" },
-      h("span", { class: "eb-place" }, tx(loc.name)), h("span", { class: "eb-sep" }, "·"),
-      h("span", {}, [tx(loc.admin1), tx(loc.country)].filter(Boolean).join(", ")),
-      h("span", { class: "eb-sep" }, "·"), h("span", { class: "eb-coord" }, coords(loc.lat, loc.lon)),
-      h("span", { class: "eb-sep" }, "·"), liveClock(loc.tz), loc.tz !== viewerTz() ? h("span", { class: "eb-zone" }, ` ${clock(now, loc.tz).split(" ").slice(1).join(" ")}`) : null,
-    ) : h("p", { class: "eyebrow" }, h("span", { class: "eb-place" }, "DAYWIRE"), h("span", { class: "eb-sep" }, "·"), h("span", {}, m.noLocationYet)),
+    loc ? h("div", { class: "here" },
+      h("p", { class: "here-place" }, h("span", {}, h("strong", {}, tx(loc.name)), [tx(loc.admin1), tx(loc.country)].filter(Boolean).map((x) => `, ${x}`).join(""))),
+      h("p", { class: "here-time" }, liveClock(loc.tz),
+        h("span", { class: "here-zone" }, loc.tz !== viewerTz() ? m.localTime(clock(now, loc.tz).split(" ").slice(1).join(" ")) : m.localTime("").trim()),
+        h("span", { class: "here-coord" }, coords(loc.lat, loc.lon))),
+    ) : h("div", { class: "here" }, h("p", { class: "here-place" }, h("strong", {}, m.noLocationYet))),
     h("h1", { class: "title" }, ...titleA, " ", h("em", {}, ...titleB, underline)),
     h("p", { class: "sub" }, m.heroSub),
     sec ? h("div", { class: "readout", role: "group", "aria-label": m.readout },

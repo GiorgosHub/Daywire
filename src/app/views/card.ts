@@ -62,6 +62,16 @@ export function savedToggle(n: Notice, compact = true): HTMLButtonElement {
   }, icon("bookmark"), compact ? null : h("span", {}, on ? m.saved : m.save));
 }
 
+/** For a notice in force with a stated start and end: how much of that time has passed, filled up to now.
+ *  It moves with the clock (every re-render) and fills from its start when the card first appears. */
+export function liveStrip(r: Row, now: number): HTMLElement | null {
+  const { startMs, endMs, state } = r.st;
+  if (state !== "active" || startMs === undefined || endMs === undefined || endMs <= startMs || r.st.unverified) return null;
+  const pct = Math.round(Math.min(1, Math.max(0, (now - startMs) / (endMs - startMs))) * 100);
+  return h("div", { class: "strip", title: M().elapsed(pct), "aria-hidden": "true", style: `--k:${pct / 100}` },
+    h("span", { class: "strip-fill" }), h("span", { class: "strip-now" }));
+}
+
 export function card(r: Row, now: number, index = 0): HTMLElement {
   const m = M();
   const n = r.n;
@@ -94,6 +104,7 @@ export function card(r: Row, now: number, index = 0): HTMLElement {
         when ?? (n.currentWhileListed ? m.liveStatusNoTimes : r.st.state === "open_ended" || r.st.state === "stale" ? m.noDatesAnnounced : m.noDatesOfEffect),
         st.detail ? h("span", { class: "rel" }, ` · ${st.detail}`) : null)),
     ),
+    liveStrip(r, now),
     h("p", { class: "meta" },
       h("span", { class: "pub" }, tx(n.publisher), n.sources.length > 1 ? ` ${m.republications(n.sources.length - 1)}` : ""),
       n.publishedAt ? h("span", {}, `${m.published} `, h("time", { datetime: n.publishedAt }, dayClock(Date.parse(n.publishedAt), n.tz))) : null,
