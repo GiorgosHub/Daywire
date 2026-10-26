@@ -17,15 +17,16 @@ const SEC = {
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   for (const [k, v] of Object.entries(SEC)) res.setHeader(k, v);
-  if (url.pathname === "/api/feed") {
-    const mod = await import("../functions/feed.ts");
+  const API = { "/api/feed": "../functions/feed.ts", "/api/places": "../functions/places.ts", "/api/sources": "../functions/sources.ts" };
+  if (API[url.pathname]) {
+    const mod = await import(API[url.pathname]);
     const r = {
       statusCode: 200,
       status(c) { this.statusCode = c; return this; },
       setHeader: (k, v) => res.setHeader(k, v),
       json(b) { res.writeHead(this.statusCode, { "content-type": "application/json; charset=utf-8" }); res.end(JSON.stringify(b)); },
     };
-    if (process.env.FAIL_FEED === "1") { res.writeHead(500); return res.end("{}"); }
+    if (process.env.FAIL_FEED === "1" && url.pathname === "/api/feed") { res.writeHead(500); return res.end("{}"); }
     try { await mod.default({ method: req.method, query: Object.fromEntries(url.searchParams) }, r); }
     catch (e) { console.error(e); res.writeHead(500); res.end("{}"); }
     return;

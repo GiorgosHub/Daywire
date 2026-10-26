@@ -1,25 +1,32 @@
 // A notice card: what, where, when, who published it, when we checked it, status, link to the original.
-import { areaNames, CATEGORY_LABEL } from "../../domain/build.ts";
+import { areaNames } from "../../domain/build.ts";
 import type { Notice } from "../../domain/types.ts";
 import type { Row } from "../../domain/view.ts";
 import { h, icon } from "../dom.ts";
-import { dayClock, getLang, rangeLabel, relative, t, tx } from "../i18n.ts";
+import { dayClock, getLang, LANGS, M, rangeLabel, relative, tx } from "../i18n/index.ts";
 import { S, update } from "../state.ts";
 import { severityChip, statusChip, statusText } from "./status-ui.ts";
 
 export function whereText(n: Notice): string {
+  const m = M();
+  const city = S.feed ? tx(S.feed.location.name) : "";
   if (n.scope === "region") {
-    const reg = n.regionLabel ? tx(n.regionLabel) : "";
-    return n.notes.includes("mentions-city") ? t(`Περιφέρεια ${reg} · αναφέρει ρητά τη Λάρισα`, `${reg} region · names Larissa explicitly`) : t(`Περιφέρεια ${reg}`, `${reg} region`);
+    const reg = tx(n.regionLabel);
+    return n.notes.includes("mentions-city") ? m.regionNamesCity(reg, city) : m.region(reg);
   }
-  if (n.scope === "city") return t("Όλη η πόλη", "Citywide");
-  const names = tx(areaNames(n.cityId, n.areas));
+  if (n.scope === "city") {
+    const a = n.areas.map((x) => x.label).join(", ");
+    return a ? `${a} · ${m.citywide(city)}` : m.citywide(city);
+  }
+  const names = tx(areaNames(n.locationId, n.areas));
   const streets = n.segments.flatMap((s) => s.streets);
   if (n.category === "roads" && streets.length) return streets.slice(0, 4).map((s) => s.replace(/\s*\(.*$/, "")).join(" · ");
-  if (names && streets.length) return t(`${names} · ${streets.length} ${streets.length === 1 ? "οδός" : "οδοί"}`, `${names} · ${streets.length} ${streets.length === 1 ? "street" : "streets"}`);
-  if (names) return names;
+  const near = n.notes.find((x) => /^within-\d+km$/.test(x));
+  const suffix = near ? ` · ${m.withinKm(Number(/\d+/.exec(near)![0]), city)}` : "";
+  if (names && streets.length) return `${names} · ${m.streets(streets.length)}${suffix}`;
+  if (names) return names + suffix;
   if (streets.length) return streets.slice(0, 3).join(" · ");
-  return t("Η περιοχή δεν αναφέρεται", "Area not stated");
+  return m.areaNotStated;
 }
 
 export function isNew(n: Notice): boolean {
@@ -28,54 +35,63 @@ export function isNew(n: Notice): boolean {
   return Number.isFinite(seen) && seen > S.previousVisit;
 }
 
+/** Shown when the source text is in another language than the interface. */
+export function sourceLangNote(n: Notice): string | null {
+  if (n.language === getLang()) return null;
+  const name = (LANGS as Record<string, { label: string }>)[n.language]?.label ?? n.language;
+  return M().publishedIn(name);
+}
+
 export function savedToggle(n: Notice, compact = true): HTMLButtonElement {
-  const on = S.prefs.saved.includes(n.id);
+  const m = M();
+  const on = S.prefs.savedNotices.includes(n.id);
   return h("button", {
     type: "button",
     class: `btn-icon save${on ? " on" : ""}${compact ? "" : " with-label"}`,
     "aria-pressed": on ? "true" : "false",
-    "aria-label": on ? t("Αφαίρεση από τα αποθηκευμένα", "Remove from saved") : t("Αποθήκευση", "Save"),
-    title: on ? t("Αποθηκευμένο", "Saved") : t("Αποθήκευση", "Save"),
+    "aria-label": on ? m.unsave : m.save,
+    title: on ? m.saved : m.save,
     onclick: (e: Event) => {
       e.stopPropagation();
-      update({ saved: on ? S.prefs.saved.filter((x) => x !== n.id) : [...S.prefs.saved, n.id] });
+      update({ savedNotices: on ? S.prefs.savedNotices.filter((x) => x !== n.id) : [...S.prefs.savedNotices, n.id] });
     },
-  }, icon("bookmark"), compact ? null : h("span", {}, on ? t("Αποθηκεύτηκε", "Saved") : t("Αποθήκευση", "Save")));
+  }, icon("bookmark"), compact ? null : h("span", {}, on ? m.saved : m.save));
 }
 
 export function card(r: Row, now: number): HTMLElement {
+  const m = M();
   const n = r.n;
-  const when = rangeLabel(n.start, n.end);
+  const when = rangeLabel(n.start, n.end, n.tz);
   const st = statusText(n, r.st, now);
-  const cat = CATEGORY_LABEL[n.category];
-  const greekOnly = getLang() === "en" && n.headline.en === n.originalTitle;
+  const headline = tx(n.headline);
+  const untranslated = n.language !== getLang() && !n.headline[getLang()];
   const href = `#/n/${encodeURIComponent(n.id)}`;
   return h("article", { class: `card cat-${n.category} ${st.cls}${r.st.unverified ? " unverified" : ""}${r.priority ? " prio" : ""}`, "data-id": n.id },
     h("div", { class: "card-top" },
-      h("span", { class: "cat" }, icon(n.category, "ic ic-s"), tx(cat)),
+      h("span", { class: "cat" }, icon(n.category, "ic ic-s"), m.cat[n.category]),
       statusChip(r, now),
       severityChip(n),
-      isNew(n) ? h("span", { class: "chip st-new" }, t("Νέο", "New")) : null,
-      n.fixture ? h("span", { class: "chip st-fixture" }, t("Δοκιμαστικό", "Test data")) : null,
+      isNew(n) ? h("span", { class: "chip st-new" }, m.isNew) : null,
+      n.fixture ? h("span", { class: "chip st-fixture" }, m.testData) : null,
       h("span", { class: "spacer" }),
       savedToggle(n),
     ),
-    h("h3", { class: "card-title" }, h("a", { href, lang: greekOnly ? "el" : null }, tx(n.headline))),
-    greekOnly ? h("p", { class: "hint" }, t("", "Title in Greek, as published.")) : null,
+    h("h3", { class: "card-title" }, h("a", { href, lang: untranslated ? n.language : null }, headline)),
+    untranslated ? h("p", { class: "hint" }, sourceLangNote(n)) : null,
     h("dl", { class: "facts" },
-      h("div", {}, h("dt", {}, icon("pin", "ic ic-s"), h("span", { class: "sr" }, t("Πού", "Where"))), h("dd", {}, whereText(n),
-        r.matched.length ? h("span", { class: "mine" }, t(` · αφορά: ${r.matched.join(", ")}`, ` · matches: ${r.matched.join(", ")}`)) : null)),
-      h("div", {}, h("dt", {}, icon("clock", "ic ic-s"), h("span", { class: "sr" }, t("Πότε", "When"))), h("dd", {},
-        when ?? (r.st.state === "open_ended" || r.st.state === "stale" ? t("Δεν ανακοινώθηκαν ημερομηνίες", "No dates announced") : t("Χωρίς ημερομηνίες εφαρμογής", "No dates of effect")),
+      h("div", {}, h("dt", {}, icon("pin", "ic ic-s"), h("span", { class: "sr" }, m.where)), h("dd", {}, whereText(n),
+        r.matched.length ? h("span", { class: "mine" }, ` · ${m.matches(r.matched.join(", "))}`) : null)),
+      h("div", {}, h("dt", {}, icon("clock", "ic ic-s"), h("span", { class: "sr" }, m.when)), h("dd", {},
+        when ?? (n.currentWhileListed ? m.liveStatusNoTimes : r.st.state === "open_ended" || r.st.state === "stale" ? m.noDatesAnnounced : m.noDatesOfEffect),
         st.detail ? h("span", { class: "rel" }, ` · ${st.detail}`) : null)),
     ),
     h("p", { class: "meta" },
-      h("span", { class: "pub" }, tx(n.publisher), n.sources.length > 1 ? t(` +${n.sources.length - 1} αναδημοσίευση`, ` +${n.sources.length - 1} republication`) : ""),
-      n.publishedAt ? h("span", {}, t("Δημοσίευση ", "Published "), h("time", { datetime: n.publishedAt }, dayClock(Date.parse(n.publishedAt)))) : null,
-      n.updatedAt ? h("span", {}, t("Ενημέρωση ", "Updated "), h("time", { datetime: n.updatedAt }, dayClock(Date.parse(n.updatedAt)))) : null,
-      h("span", { class: r.st.unverified ? "checked warn" : "checked" }, r.st.unverified ? t("Επαληθεύτηκε τελευταία ", "Last verified ") : t("Ελέγχθηκε ", "Checked "),
+      h("span", { class: "pub" }, tx(n.publisher), n.sources.length > 1 ? ` ${m.republications(n.sources.length - 1)}` : ""),
+      n.publishedAt ? h("span", {}, `${m.published} `, h("time", { datetime: n.publishedAt }, dayClock(Date.parse(n.publishedAt), n.tz))) : null,
+      n.updatedAt ? h("span", {}, `${m.updated} `, h("time", { datetime: n.updatedAt }, dayClock(Date.parse(n.updatedAt), n.tz))) : null,
+      h("span", { class: r.st.unverified ? "checked warn" : "checked" }, `${r.st.unverified ? m.lastVerified : m.checked} `,
         h("time", { datetime: n.lastVerifiedAt }, relative(Date.parse(n.lastVerifiedAt), now))),
-      h("a", { class: "src", href: n.sourceUrl, target: "_blank", rel: "noopener noreferrer" }, t("Πρωτότυπο", "Original"), icon("external", "ic ic-xs"), h("span", { class: "sr" }, t(" (ανοίγει νέα καρτέλα)", " (opens a new tab)"))),
+      h("a", { class: "src", href: n.sourceUrl, target: "_blank", rel: "noopener noreferrer" }, m.original, icon("external", "ic ic-xs"), h("span", { class: "sr" }, ` ${m.newTab}`)),
     ),
   );
 }

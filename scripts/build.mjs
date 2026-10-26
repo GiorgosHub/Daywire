@@ -14,6 +14,7 @@ await build({
   minify: true,
   external: ["/fonts/*"],
   legalComments: "none",
+  charset: "utf8",
   logLevel: "info",
 });
 await rename("dist/app-style.css", "dist/app.css");

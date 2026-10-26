@@ -1,15 +1,18 @@
-// Freshness and status. Computed at render time from the notice's own dates and the time now, so a notice whose end
-// has passed is never shown as current just because it is still in the feed.
+// Freshness and status. Computed at render time from the notice's own dates, its own time zone and the time now,
+// so a notice whose end has passed is never shown as current just because it is still in the feed.
 //
-// Rules (documented in docs/data-model.md):
-//   end passed                      → "ended" (an event) or "expired" (an official warning's validity)
-//   start in the future             → "upcoming"
-//   start passed, end in the future → "active"
-//   start passed, no end published  → "open_ended", until 14 days after the latest announcement, then "stale"
-//   no dates, a disruption category → "open_ended" (reported as in effect when published), "stale" after 14 days
-//   no dates, an announcement       → "info", "archived" after 30 days
-//   ended/expired over 14 days ago  → "archived"
-// Overlay: `unverified` when the notice's source failed on the last check, or it was last verified over 6 hours ago.
+// Rules (docs/data-model.md):
+//   end passed                         → "ended" (an event) or "expired" (an official warning's validity)
+//   start in the future                → "upcoming"
+//   start passed, end in the future    → "active"
+//   live status feed, still listed     → "active" (the source lists only what is in force now)
+//   start passed, no end published     → "open_ended", until 14 days after the latest announcement, then "stale"
+//   no dates, a disruption category    → "open_ended" (reported as in effect when published), "stale" after 14 days
+//   no dates, an announcement          → "info", "archived" after 30 days
+//   ended/expired over 14 days ago     → "archived"
+// Overlay `unverified`: the notice's source failed on the last check, or it was last verified over 6 hours ago.
+// A live-status notice with no end of its own that can't be re-verified is never shown as "active": it becomes
+// "stale". One with its own end (an official warning) stays "active" until that end, marked unverified.
 import { dayBounds, DAY, HOUR } from "./time.ts";
 import type { Notice, TimePoint } from "./types.ts";
 
@@ -32,19 +35,20 @@ export function bounds(t: TimePoint, edge: "start" | "end", tz: string): number 
 
 const DISRUPTION = new Set(["water", "power", "roads", "transport", "services", "emergency"]);
 
-export function statusOf(n: Notice, now: number, tz: string, failedSources: ReadonlySet<string> = new Set()): Status {
-  const startMs = n.start ? bounds(n.start, "start", tz) : undefined;
-  const endMs = n.end ? bounds(n.end, "end", tz) : undefined;
+export function statusOf(n: Notice, now: number, failedSources: ReadonlySet<string> = new Set()): Status {
+  const startMs = n.start ? bounds(n.start, "start", n.tz) : undefined;
+  const endMs = n.end ? bounds(n.end, "end", n.tz) : undefined;
   const latest = Date.parse(n.updatedAt ?? n.publishedAt ?? n.lastVerifiedAt);
   const ageMs = Number.isFinite(latest) ? now - latest : undefined;
+  const verifiedAgo = now - Date.parse(n.lastVerifiedAt);
+  const unverified = n.sources.some((s) => failedSources.has(s.sourceId)) || verifiedAgo > 6 * HOUR;
   let state: State;
   if (endMs !== undefined && now >= endMs) state = now - endMs > 14 * DAY ? "archived" : n.endKind === "validity" ? "expired" : "ended";
   else if (startMs !== undefined && now < startMs) state = "upcoming";
+  else if (n.currentWhileListed && endMs === undefined) state = unverified ? "stale" : "active";
   else if (startMs !== undefined && endMs !== undefined) state = "active";
   else if (DISRUPTION.has(n.category)) state = ageMs !== undefined && ageMs > 14 * DAY ? "stale" : "open_ended";
   else state = ageMs !== undefined && ageMs > 30 * DAY ? "archived" : "info";
-  const verifiedAgo = now - Date.parse(n.lastVerifiedAt);
-  const unverified = n.sources.some((s) => failedSources.has(s.sourceId)) || verifiedAgo > 6 * HOUR;
   return { state, unverified, ...(startMs !== undefined ? { startMs } : {}), ...(endMs !== undefined ? { endMs } : {}), ...(ageMs !== undefined ? { ageMs } : {}) };
 }
 

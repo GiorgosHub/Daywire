@@ -13,7 +13,7 @@ await rm(OUT, { recursive: true, force: true });
 await mkdir(`${OUT}/static`, { recursive: true });
 await cp("dist", `${OUT}/static`, { recursive: true });
 
-for (const name of ["feed"]) {
+for (const name of ["feed", "places", "sources"]) {
   const dir = `${OUT}/functions/api/${name}.func`;
   await mkdir(dir, { recursive: true });
   await build({ entryPoints: [`functions/${name}.ts`], outfile: `${dir}/index.mjs`, bundle: true, platform: "node", format: "esm", target: "node22", legalComments: "none", logLevel: "warning" });

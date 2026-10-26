@@ -1,45 +1,45 @@
 // Builds normalized notices: fills defaults and composes the short headline from extracted fields only.
-import { cityById } from "./cities.ts";
-import type { AreaRef, Category, Notice, Text2 } from "./types.ts";
+import { localityFor } from "./localities.ts";
+import type { AreaRef, Category, LText, Notice } from "./types.ts";
 
-export function areaNames(cityId: string, areas: AreaRef[]): Text2 {
-  const city = cityById(cityId);
-  const el: string[] = [], en: string[] = [];
-  for (const a of areas) {
-    const p = a.placeId ? city?.places.find((x) => x.id === a.placeId) : undefined;
-    el.push(p ? p.name.el : a.label);
-    en.push(p ? p.name.en : a.label);
-  }
-  return { el: el.join(", "), en: en.join(", ") };
+export const geonameIdOf = (locationId: string): number => Number(locationId.replace(/^gn:/, ""));
+
+/** Area names in each language we have them in. Unmatched areas keep the source's label in every language. */
+export function areaNames(locationId: string, areas: AreaRef[]): LText {
+  const loc = localityFor(geonameIdOf(locationId));
+  const langs = new Set<string>(["en"]);
+  const parts = areas.map((a) => {
+    const p = a.placeId ? loc?.places.find((x) => x.id === a.placeId) : undefined;
+    if (p) Object.keys(p.name).forEach((l) => langs.add(l));
+    return p ? p.name : { en: a.label };
+  });
+  const out: LText = { en: "" };
+  for (const l of langs) out[l] = parts.map((t) => t[l] ?? t.en).join(", ");
+  return out;
 }
 
-export const CATEGORY_LABEL: Record<Category, Text2> = {
-  weather: { el: "Καιρός", en: "Weather" },
-  water: { el: "Νερό", en: "Water" },
-  power: { el: "Ρεύμα", en: "Power" },
-  roads: { el: "Δρόμοι", en: "Roads" },
-  transport: { el: "Συγκοινωνίες", en: "Transport" },
-  services: { el: "Υπηρεσίες", en: "Services" },
-  emergency: { el: "Πολιτική προστασία", en: "Civil protection" },
-  announcement: { el: "Ανακοινώσεις", en: "Announcements" },
-};
-
-export function headlineFor(category: Category, cityId: string, areas: AreaRef[], streets: string[], originalTitle: string): Text2 {
-  const where = areaNames(cityId, areas);
+/**
+ * Headlines we compose for Greek announcements (whose titles are long and inconsistent). They state only extracted
+ * facts. Every other notice uses the source's own title; we never translate official titles.
+ */
+export function headlineFor(category: Category, locationId: string, areas: AreaRef[], streets: string[], originalTitle: string, language: string): LText {
+  if (language !== "el") return { en: originalTitle };
+  const where = areaNames(locationId, areas);
   const firstStreets = streets.slice(0, 3).map((s) => s.replace(/\s*\(.*$/, "")).join(", ");
   if (category === "water") {
-    const w = where.el || firstStreets;
-    return w ? { el: `Διακοπή νερού · ${w}`, en: `Water interruption · ${where.en || firstStreets}` } : { el: "Διακοπή νερού", en: "Water interruption" };
+    const el = where.el ?? where.en;
+    return el || firstStreets
+      ? { el: `Διακοπή νερού · ${el || firstStreets}`, en: `Water interruption · ${where.en || firstStreets}` }
+      : { el: "Διακοπή νερού", en: "Water interruption" };
   }
-  if (category === "roads" && (firstStreets || where.el)) {
-    const w = firstStreets || where.el;
-    return { el: `Κυκλοφοριακές ρυθμίσεις · ${w}`, en: `Traffic arrangements · ${firstStreets || where.en}` };
+  if (category === "roads" && (firstStreets || where.en)) {
+    return { el: `Κυκλοφοριακές ρυθμίσεις · ${firstStreets || where.el || where.en}`, en: `Traffic arrangements · ${firstStreets || where.en}` };
   }
-  return { el: originalTitle, en: originalTitle };
+  return { en: originalTitle, el: originalTitle };
 }
 
-export type Draft = Omit<Notice, "headline" | "notes" | "related" | "fixture" | "language" | "segments" | "areas"> &
-  Partial<Pick<Notice, "headline" | "notes" | "related" | "fixture" | "segments" | "areas">>;
+export type Draft = Omit<Notice, "headline" | "notes" | "related" | "fixture" | "segments" | "areas" | "bodyAlt" | "currentWhileListed"> &
+  Partial<Pick<Notice, "headline" | "notes" | "related" | "fixture" | "segments" | "areas" | "bodyAlt" | "currentWhileListed">>;
 
 export function makeNotice(d: Draft): Notice {
   const segments = d.segments ?? [];
@@ -47,13 +47,14 @@ export function makeNotice(d: Draft): Notice {
   const streets = segments.flatMap((s) => s.streets);
   return {
     ...d,
-    language: "el",
     segments,
     areas,
+    bodyAlt: d.bodyAlt ?? [],
+    currentWhileListed: d.currentWhileListed ?? false,
     notes: d.notes ?? [],
     related: d.related ?? [],
     fixture: d.fixture ?? false,
-    headline: d.headline ?? headlineFor(d.category, d.cityId, areas, streets, d.originalTitle),
+    headline: d.headline ?? headlineFor(d.category, d.locationId, areas, streets, d.originalTitle, d.language),
   };
 }
 

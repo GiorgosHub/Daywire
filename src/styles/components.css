@@ -49,7 +49,10 @@
 .sev.chip { gap: 5px; }
 .sev-yellow.chip { background: var(--sev-yellow-bg); color: var(--sev-yellow-ink); }
 .sev-orange.chip { background: var(--sev-orange-bg); color: var(--sev-orange-ink); }
-.sev-red.chip { background: var(--sev-red-bg); color: var(--sev-red-ink); }
+.sev-red.chip, .sev-r4.chip { background: var(--sev-red-bg); color: var(--sev-red-ink); }
+.sev-r3.chip { background: var(--sev-orange-bg); color: var(--sev-orange-ink); }
+.sev-r2.chip { background: var(--sev-yellow-bg); color: var(--sev-yellow-ink); }
+.sev-r1.chip { background: var(--surface-2); color: var(--slate); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .chip-btn {

@@ -1,6 +1,6 @@
 // Deterministic extraction of dates, times, places and streets from Greek announcement text.
 // Rules are conservative: when the text does not say something explicitly, we return nothing rather than guess.
-import { cityById, matchPlace, type City } from "./cities.ts";
+import { matchPlace } from "./localities.ts";
 import { fold, monthFromGreek, MONTH_PATTERN, weekdayFromGreek, WEEKDAY_PATTERN } from "./greek.ts";
 import { DAY, wallAt, weekdayOf, ymd, zonedToUtc } from "./time.ts";
 import type { AreaRef, Segment, TimePoint } from "./types.ts";
@@ -73,7 +73,10 @@ const AREA_PATTERNS: RegExp[] = [
   /περιοχής\s+του\s+((?:Αγ\.|Αγίου|Αγίας)\s?[\p{Lu}][\p{Ll}\p{M}]+|[\p{Lu}][\p{Ll}\p{M}]+)/u,
 ];
 
-export function areasIn(text: string, city: City): AreaRef[] {
+/** Where a notice belongs: the city's GeoNames id (for its locality profile) and its time zone. */
+export interface Where { geonameId: number; tz: string }
+
+export function areasIn(text: string, city: Where): AreaRef[] {
   const out: AreaRef[] = [];
   for (const re of AREA_PATTERNS) {
     const mt = re.exec(text);
@@ -83,10 +86,10 @@ export function areasIn(text: string, city: City): AreaRef[] {
   return out;
 }
 
-export function addArea(list: AreaRef[], label: string, city: City): void {
+export function addArea(list: AreaRef[], label: string, city: Where): void {
   const clean = label.replace(/\s+/g, " ").trim();
   if (!clean) return;
-  const placeId = matchPlace(city, clean);
+  const placeId = matchPlace(city.geonameId, clean);
   const key = placeId ?? fold(clean);
   if (list.some((a) => (a.placeId ?? fold(a.label)) === key)) return;
   list.push(placeId ? { label: clean, placeId } : { label: clean });
@@ -134,8 +137,7 @@ export function timePoint(date: FoundDate, hm: [number, number] | undefined, tz:
  * One announcement can hold several interruptions ("Η Δ.Ε.Υ.Α.Λ. ενημερώνει…" paragraphs), each with its own
  * place, streets, date and hours. Each becomes a segment.
  */
-export function extractWater(text: string, publishedMs: number, cityId: string): { segments: Segment[]; notes: string[] } {
-  const city = cityById(cityId)!;
+export function extractWater(text: string, publishedMs: number, city: Where): { segments: Segment[]; notes: string[] } {
   const notes: string[] = [];
   const body = withoutSignatures(text);
   const chunks = body.split(/(?=Η\s+Δ\.?\s?Ε\.?\s?Υ\.?\s?Α\.?\s?(?:Λ\.|Λάρισας)\s+(?:ενημερώνει|ανακοινώνει))/u);

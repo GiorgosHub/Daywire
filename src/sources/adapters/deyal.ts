@@ -1,18 +1,17 @@
 // ΔΕΥΑΛ (Larissa water utility): planned interruptions from its Joomla K2 RSS feed.
 import { excerpt, makeNotice } from "../../domain/build.ts";
 import { actionSentence, addArea, envelope, extractWater } from "../../domain/extract.ts";
-import { cityById } from "../../domain/cities.ts";
 import type { Notice } from "../../domain/types.ts";
 import { htmlToText } from "../html.ts";
 import { parseRss } from "../xml.ts";
 import type { Adapter } from "../types.ts";
 
-export const DEYAL_PUBLISHER = { el: "ΔΕΥΑΛ", en: "DEYAL (Larissa water utility)" };
+export const DEYAL_PUBLISHER = { en: "DEYAL (Larissa water utility)", el: "ΔΕΥΑΛ" };
 
 export const deyalAdapter: Adapter = async (ctx) => {
   const xml = await ctx.get(ctx.source.endpoint!);
   const items = parseRss(xml);
-  const city = cityById(ctx.cityId)!;
+  const city = { geonameId: ctx.location.geonameId, tz: ctx.location.tz };
   const notices: Notice[] = [];
   for (const it of items) {
     const url = it.link || it.guid;
@@ -22,13 +21,15 @@ export const deyalAdapter: Adapter = async (ctx) => {
     // the K2 feed wraps an image and the intro text; keep the text only
     const intro = /K2FeedIntroText">([\s\S]*)<\/div>\s*$/.exec(it.description)?.[1] ?? it.description;
     const text = htmlToText(intro).replace(/^ΑΝΑΚΟΙΝΩΣΗ ΔΙΑΚΟΠΗΣ ΝΕΡΟΥ\n?/u, "");
-    const { segments, notes } = extractWater(text, publishedMs, ctx.cityId);
+    const { segments, notes } = extractWater(text, publishedMs, city);
     const areas = segments.flatMap((s) => s.areas).reduce<Notice["areas"]>((acc, a) => (addArea(acc, a.label, city), acc), []);
     const env = envelope(segments);
     const publishedAt = new Date(publishedMs).toISOString();
     notices.push(makeNotice({
       id: `deyal-water:${nativeId}`,
-      cityId: ctx.cityId,
+      locationId: ctx.location.id,
+      tz: ctx.location.tz,
+      language: "el",
       category: "water",
       originalTitle: it.title,
       body: excerpt(text.replace(/\n?Ο Αντιπρόεδρος[\s\S]*$/u, "")),

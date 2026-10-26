@@ -1,13 +1,14 @@
 // Turns notices + the person's preferences into what the homepage shows: relevance, priority, sections, counts.
 // All counts come from the records passed in. Nothing is padded or estimated.
-import { areaNames, CATEGORY_LABEL } from "./build.ts";
+import { areaNames } from "./build.ts";
 import { fold } from "./greek.ts";
 import { isLive, statusOf, type State, type Status } from "./status.ts";
 import { DAY } from "./time.ts";
 import type { Category, Notice } from "./types.ts";
 
+/** What the person chose for one location. */
 export interface Prefs {
-  cityId: string;
+  locationId: string;
   placeIds: string[];
   /** Streets or places typed by the person, matched against the streets and areas named in notices. */
   terms: string[];
@@ -35,16 +36,20 @@ export function relevance(n: Notice, p: Prefs): { rel: Relevance; matched: strin
 
 /**
  * High priority (deterministic):
- *  - an official orange or red weather warning in force, or starting within 24 hours;
+ *  - an official warning whose source classification ranks 3 or 4 (MeteoAlarm orange/red, CAP Severe/Extreme,
+ *    EA flood warning/severe flood warning) in force, or starting within 24 hours;
  *  - a civil-protection notice that is in force;
+ *  - a public-transport disruption ranked 3 by its operator (suspensions, closures, severe delays) in force;
  *  - a water, power or road disruption in force or starting within 24 hours, in one of the person's places
  *    (or anywhere in the city when they have not chosen places).
  */
 export function isPriority(n: Notice, st: Status, rel: Relevance, now: number, hasPlaces: boolean): boolean {
   const soon = st.state === "upcoming" && st.startMs !== undefined && st.startMs - now <= DAY;
   const inForce = st.state === "active" || st.state === "open_ended";
-  if (n.category === "weather") return (n.severity?.level === "orange" || n.severity?.level === "red") && (st.state === "active" || soon);
+  const rank = n.severity?.rank ?? 0;
+  if (n.category === "weather") return rank >= 3 && (st.state === "active" || soon);
   if (n.category === "emergency") return inForce;
+  if (n.category === "transport") return rank >= 3 && st.state === "active";
   if (n.category === "water" || n.category === "power" || n.category === "roads") {
     if (!(st.state === "active" || soon)) return false;
     return hasPlaces ? rel === "mine" : true;
@@ -52,10 +57,10 @@ export function isPriority(n: Notice, st: Status, rel: Relevance, now: number, h
   return false;
 }
 
-export function rows(notices: Notice[], p: Prefs, now: number, tz: string, failed: ReadonlySet<string>): Row[] {
+export function rows(notices: Notice[], p: Prefs, now: number, failed: ReadonlySet<string>): Row[] {
   const hasPlaces = p.placeIds.length + p.terms.length > 0;
   return notices.map((n) => {
-    const st = statusOf(n, now, tz, failed);
+    const st = statusOf(n, now, failed);
     const { rel, matched } = relevance(n, p);
     return { n, st, rel, matched, priority: isPriority(n, st, rel, now, hasPlaces) };
   });
@@ -96,28 +101,32 @@ export function sections(all: Row[], p: Prefs, now: number): Sections {
   };
 }
 
-/** Accent- and case-insensitive search over what a notice says and where it applies. All words must match. */
-export function haystack(n: Notice): string {
-  const c = CATEGORY_LABEL[n.category];
-  const names = areaNames(n.cityId, n.areas);
-  return fold([n.originalTitle, n.headline.el, n.headline.en, n.body, n.bodyEn ?? "", names.el, names.en, ...n.segments.flatMap((s) => s.streets), n.publisher.el, n.publisher.en, c.el, c.en, n.regionLabel?.el ?? "", n.regionLabel?.en ?? ""].join(" \n "));
+/**
+ * Accent- and case-insensitive search over what a notice says and where it applies, in every language we hold
+ * for it. `labels` adds interface words (category names) in the person's language. All words must match.
+ */
+export function haystack(n: Notice, labels: string[] = []): string {
+  const names = areaNames(n.locationId, n.areas);
+  return fold([n.originalTitle, ...Object.values(n.headline), n.body, ...n.bodyAlt.map((b) => b.text), ...Object.values(names),
+    ...n.segments.flatMap((s) => s.streets), ...Object.values(n.publisher), ...Object.values(n.regionLabel ?? { en: "" }),
+    ...Object.values(n.severity?.label ?? { en: "" }), ...labels].join(" \n "));
 }
 
-export function matches(n: Notice, q: string): boolean {
+export function matches(n: Notice, q: string, labels: string[] = []): boolean {
   const words = fold(q).split(" ").filter(Boolean);
   if (!words.length) return true;
-  const h = haystack(n);
+  const h = haystack(n, labels);
   return words.every((w) => h.includes(w));
 }
 
 export type TimeFilter = "all" | "now" | "next7" | "ended";
 export interface Filters { q: string; categories: Category[]; time: TimeFilter; publisher: string; mineOnly: boolean; savedOnly: boolean }
 
-export function applyFilters(all: Row[], f: Filters, p: Prefs, now: number): Row[] {
+export function applyFilters(all: Row[], f: Filters, p: Prefs, now: number, labelsFor: (n: Notice) => string[] = () => []): Row[] {
   return all.filter((r) => {
-    if (f.q && !matches(r.n, f.q)) return false;
+    if (f.q && !matches(r.n, f.q, labelsFor(r.n))) return false;
     if (f.categories.length && !f.categories.includes(r.n.category)) return false;
-    if (f.publisher && r.n.publisher.el !== f.publisher) return false;
+    if (f.publisher && r.n.publisher.en !== f.publisher) return false;
     if (f.mineOnly && r.rel !== "mine" && r.rel !== "citywide") return false;
     if (f.savedOnly && !p.saved.includes(r.n.id)) return false;
     if (f.time === "now" && !(r.st.state === "active" || r.st.state === "open_ended")) return false;

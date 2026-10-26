@@ -1,55 +1,80 @@
-# Sources (researched 2026-10-26)
+# Sources (researched and tested 2026-10-26)
 
-| Source | Publisher | Access method | Status in DAYWIRE |
-|---|---|---|---|
-| Water interruptions | ΔΕΥΑΛ (Larissa water utility) | RSS (Joomla K2): `https://deyal.gr/el/gia-polites/vlaves-diakopes?format=feed&type=rss` | **Connected** |
-| Announcements and service-change press releases | Δήμος Λαρισαίων | WordPress REST API: `https://www.larissa.gov.gr/wp-json/wp/v2/posts?categories=5,35&per_page=60&_fields=…` | **Connected** |
-| Official weather warnings | ΕΜΥ / HNMS, via MeteoAlarm | JSON (CAP) feed: `https://feeds.meteoalarm.org/api/v1/warnings/feeds-greece`, filtered to EMMA region `GR001` (Thessaly) | **Connected** |
-| Planned power cuts | ΔΕΔΔΗΕ / HEDNO | HTML form at `siteapps.deddie.gr/Outages2Public`, behind Imperva/Incapsula bot protection | Link only. We do not bypass bot protection. |
-| 112 emergency alerts | Ministry for Climate Crisis & Civil Protection | Cell broadcast to phones; no public feed | Link only. DAYWIRE does not relay or replace 112. |
-| City buses | n/a | No verified public feed found | Not connected |
+Every source below was reached and parsed live on 2026-10-26 (through a browser, because the build machine has no
+general internet access). The real responses were saved in `tests/fixtures/` and are covered by tests.
+What has **not** been verified yet is a fetch from a Vercel server; see the README.
 
-## ΔΕΥΑΛ
-- **What:** planned water interruptions with date, hours, the community or neighbourhood, and often a list of streets.
-- **Updates:** a few times a week, usually the working day before.
-- **Extraction:** dates such as "Δευτέρα 26 Οκτωβρίου" and hours such as "από 09:00 έως 11:00" are read from the text.
-  - The year is inferred from the publication date, and the detail view says so.
-  - The weekday is checked against the date.
-  - Signature lines ("Λάρισα, 23 Οκτωβρίου 2026") and ordinal names ("28ης Οκτωβρίου", a street) are ignored.
-- **Places:** matched only from explicit phrases:
-  - "κατοίκους της Χ"
-  - "στη Δ. Κ. Χ"
-  - "συνοικία Χ"
-  - "περιοχής του Χ"
+| Source | Where | Categories | Access | Status |
+|---|---|---|---|---|
+| ΕΜΥ / HNMS warnings via MeteoAlarm | Greece: Thessaly, Attica, Central Macedonia, Epirus, Crete, North Aegean | weather | JSON (CAP) `feeds.meteoalarm.org/api/v1/warnings/feeds-greece` | **Connected** |
+| ΔΕΥΑΛ water interruptions | Larissa | water | RSS (Joomla K2) | **Connected** |
+| Δήμος Λαρισαίων | Larissa | announcements, roads, services | WordPress REST API | **Connected** |
+| National Weather Service alerts | USA (50 states + DC) | weather | `api.weather.gov/alerts/active?point=lat,lon` | **Connected** |
+| Environment Agency flood warnings | England | weather (floods) | `environment.data.gov.uk/flood-monitoring/id/floods?lat&long&dist=10` | **Connected** |
+| TfL line status | London (30 km) | transport | `api.tfl.gov.uk/Line/Mode/…/Status` | **Built and tested; off until `TFL_APP_KEY` is set** |
+| ΔΕΔΔΗΕ / HEDNO planned power cuts | Greece | power | HTML form behind Imperva bot protection | Link only (we don't bypass bot protection) |
+| 112 Greece | Greece | civil protection | Cell broadcast; no feed | Link only |
+| Location search: Open-Meteo geocoder | World | — | `geocoding-api.open-meteo.com/v1/search` and `/v1/get` (GeoNames) | **Connected** |
 
-  Streets come from the bullet lists. A street named "Τερψιθέας" is never taken to mean the community of Terpsithea.
-- **End time:** the announced end. ΔΕΥΑΛ does not publish completion, so after the end time the UI says "Expected to have ended".
-- **Access:** robots.txt disallows only system folders. The feed is offered publicly by the site. One request per refresh.
-- **Fault lines:** the phone numbers shown in the detail view were read on deyal.gr on 2026-10-26: 2410687210 (working hours) and 2410687220 (24 h).
+## Notes per source
 
-## Δήμος Λαρισαίων
-- **What it covers:**
-  - Category 5, "Ανακοινώσεις": about 2,160 posts. All of them are kept.
-  - Category 35, "Δελτία Τύπου": about 6,000 posts. A post is kept only when a rule in `src/domain/classify.ts` matches its title: traffic arrangements, road works, interruptions, markets, opening hours, refuse collection or transport.
-- **Times:** `date_gmt` and `modified_gmt` are UTC.
-  - When `modified_gmt` is more than 10 minutes after publication, it is shown as "Updated".
-  - Event dates come from the text.
-- **Duplicates:** the municipality republishes ΔΕΥΑΛ notices.
-  - These are merged with the ΔΕΥΑΛ originals when the category, the local date and at least one place match. ΔΕΥΑΛ stays first, and both links are kept.
-  - Successive road-works posts that name a common street within 21 days become one thread. Older posts stay listed as related.
-- **Access:** robots.txt is `Disallow:` (everything allowed). The REST API is public and read-only. One request per refresh.
+### MeteoAlarm (ΕΜΥ)
+- **Region mapping.** Cities are matched to EMMA warning regions through their GeoNames admin1 id. The mappings, checked against the area names in the feed:
 
-## MeteoAlarm / ΕΜΥ
-- **What:** CAP alerts with Greek and English text, `onset` and `expires`, and HNMS's own awareness level (2 yellow, 3 orange, 4 red) and hazard type.
-- **Severity:** DAYWIRE never computes severity. It displays the source's level.
-- **Coverage:** warnings are regional (Thessaly). The UI says so, and notes when the text names Larissa explicitly.
-- **Links:** there is no page for each individual warning. We link the `web` field the alert carries (`https://www.emy.gr`).
-- **Terms:** we could not read the MeteoAlarm terms page programmatically on 2026-10-26 (it is a client-rendered app). The feed is publicly offered for redistribution and we credit HNMS and MeteoAlarm. **To do:** confirm the attribution wording against the terms page by hand.
+  | GeoNames admin1 | id | EMMA region |
+  |---|---|---|
+  | Thessaly | 6697809 | GR001 |
+  | Attica | 6692632 | GR011 |
+  | Central Macedonia | 6697801 | GR007 |
+  | Epirus | 6697804 | GR008 |
+  | Crete | 6697802 | GR016 |
+  | North Aegean | 6697806 | GR014 |
 
-## Adding a city or source
-1. Add the city to `src/domain/cities.ts`: its places, aliases, time zone and EMMA code.
-2. Add an adapter in `src/sources/adapters/` that returns `Notice[]` using `makeNotice()`.
-3. Register the source in `src/sources/registry.ts` with:
-   - its endpoint and a short note on coverage and limits
-   - a captured fixture in `tests/fixtures/`
-4. Add tests against the fixture.
+  West Greece, Peloponnese, Central Greece, South Aegean, East Macedonia & Thrace and West Macedonia are split differently between the two systems, so they are not mapped. Mapping them needs EMMA polygons.
+- **Severity:** HNMS's awareness level is kept as it is (2 yellow, 3 orange, 4 red).
+- **Text:** the Greek text is primary. HNMS's own English version is shown to English readers and labelled as HNMS's own text.
+- **Terms:** we could not read the MeteoAlarm terms page programmatically. The feed is offered publicly for redistribution; we credit HNMS and MeteoAlarm (EUMETNET). Confirm the wording by hand.
+- Adding another European country means adding an entry to `METEOALARM_COUNTRIES`: its slug, its issuing service, and the admin1→EMMA map.
+
+### ΔΕΥΑΛ and Δήμος Λαρισαίων
+Unchanged from the first release. Details are in the git history of this file and in `docs/data-model.md`.
+
+### National Weather Service (USA)
+- **Terms:** open data, free for any purpose. NWS asks for a User-Agent that identifies the application, which we send.
+- **Query:** one request per city, at its point (4 decimal places).
+- **Severity:** NWS's CAP severity is kept as it is (Extreme 4, Severe 3, Moderate 2, Minor 1).
+- **Dates:** `onset`/`effective` is the start. The end is `ends`, or `expires` when `ends` is absent.
+- **Text:** `instruction` is quoted as the source's own guidance.
+- **Link:** the official alert record (`@id`).
+
+### Environment Agency (England)
+- **Terms:** Open Government Licence v3. We show the required attribution wording.
+- **Query:** flood areas within 10 km of the city's centre point. Severity levels:
+  - 1: severe flood warning
+  - 2: flood warning
+  - 3: flood alert
+  - 4: no longer in force, shown as expired
+- **Times:** the API's times carry no zone. We read them as UK local time and flag them as `source-field-no-tz`.
+- **Links:** `check-for-flooding.service.gov.uk/target-area/<id>`, a page we confirmed exists.
+
+### TfL (London)
+- **Access:** TfL's site says applications must register for keys. Anonymous requests worked in testing, but we follow the terms: the source is off until `TFL_APP_KEY` is set. Attribution: "Powered by TfL Open Data".
+- **What we keep:** only lines with a disruption (severity not in 10, 18, 19 or 20).
+- **No end shown:** TfL's validity "to" is the end of the service day, not a forecast of when the problem clears, so it is not used as an end.
+
+### Open-Meteo geocoder
+- **Terms:** free for non-commercial use, under 10,000 calls a day, CC BY 4.0. Its data is from GeoNames.
+- **Caching and paid tier:** results are cached by the CDN (1 day) and in memory. Set `OPEN_METEO_API_KEY` to use the paid customer endpoint for commercial use.
+- **What we keep:** populated places only (GeoNames feature codes `PPL*`).
+
+## Adding a city or country
+1. If the city has neighbourhood names that notices use, add a locality profile in `src/domain/localities.ts`.
+2. Add a registry entry in `src/sources/registry.ts`:
+   - `coverage` (places / regions / countries / radius), `where`, `categories`, `note`
+   - `attribution` and `requires` if the source needs them
+   - a captured `fixture` with `fixtureFor`
+3. Write an adapter in `src/sources/adapters/` only when the access method is new. It returns `Notice[]` built with `makeNotice()`, and must:
+   - set `tz`
+   - use `currentWhileListed` for live-status feeds
+   - keep the issuer's own severity in `severity`
+4. Add tests against the fixture (see `tests/global.test.ts`).

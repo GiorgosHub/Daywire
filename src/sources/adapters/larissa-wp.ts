@@ -3,7 +3,6 @@
 // matches the title, so ordinary press releases never reach the feed.
 import { z } from "zod";
 import { excerpt, makeNotice } from "../../domain/build.ts";
-import { cityById } from "../../domain/cities.ts";
 import { classifyMunicipal } from "../../domain/classify.ts";
 import { actionSentence, addArea, envelope, extractWater, findDates, namedStreets, serviceDate, timePoint } from "../../domain/extract.ts";
 import { MONTH_PATTERN, WEEKDAY_PATTERN, monthFromGreek } from "../../domain/greek.ts";
@@ -11,7 +10,7 @@ import type { AreaRef, Notice, Segment } from "../../domain/types.ts";
 import { decodeEntities, htmlToText } from "../html.ts";
 import type { Adapter } from "../types.ts";
 
-export const MUNICIPALITY = { el: "Δήμος Λαρισαίων", en: "Municipality of Larissa" };
+export const MUNICIPALITY = { en: "Municipality of Larissa", el: "Δήμος Λαρισαίων" };
 const ANNOUNCEMENTS = 5;
 
 const WpPost = z.object({
@@ -27,7 +26,7 @@ const WpPost = z.object({
 export const larissaWpAdapter: Adapter = async (ctx) => {
   const raw: unknown = JSON.parse(await ctx.get(ctx.source.endpoint!));
   if (!Array.isArray(raw)) throw new Error("expected an array of posts");
-  const city = cityById(ctx.cityId)!;
+  const city = { geonameId: ctx.location.geonameId, tz: ctx.location.tz };
   const notices: Notice[] = [];
   for (const r of raw) {
     const p = WpPost.safeParse(r);
@@ -48,7 +47,7 @@ export const larissaWpAdapter: Adapter = async (ctx) => {
     const areas: AreaRef[] = [];
 
     if (category === "water") {
-      const w = extractWater(text, publishedMs, ctx.cityId);
+      const w = extractWater(text, publishedMs, city);
       segments = w.segments;
       notes.push(...w.notes, "republication");
       // the title ends with "(Πέμπτη 24/09/2026 – Λάρισα και Γιάννουλη)": the places in the title
@@ -73,7 +72,9 @@ export const larissaWpAdapter: Adapter = async (ctx) => {
     const action = actionSentence(text);
     notices.push(makeNotice({
       id: `larissa-wp:${post.id}`,
-      cityId: ctx.cityId,
+      locationId: ctx.location.id,
+      tz: ctx.location.tz,
+      language: "el",
       category,
       originalTitle: title,
       body: excerpt(text),

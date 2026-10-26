@@ -8,14 +8,16 @@ import { statusOf } from "../src/domain/status.ts";
 import { offsetMinutes, zonedToUtc } from "../src/domain/time.ts";
 import { Feed, type Notice } from "../src/domain/types.ts";
 import { matches, rows, sections, type Prefs } from "../src/domain/view.ts";
-import { buildFeed } from "../src/server/ingest.ts";
+import { buildFeed, clearSharedCache } from "../src/server/ingest.ts";
+import { DEFAULT_LOCATION } from "../src/domain/localities.ts";
 import { memoryStore } from "../src/server/store.ts";
 
 const TZ = "Europe/Athens";
 const read = (f: string) => readFile(new URL(`./fixtures/${f}`, import.meta.url), "utf8");
 const NOW = Date.parse("2026-10-26T13:00:00Z"); // 15:00 in Larissa, the day the fixtures were captured
-const prefs = (p: Partial<Prefs> = {}): Prefs => ({ cityId: "larisa", placeIds: [], terms: [], categories: [], saved: [], ...p });
-const feed = (now = NOW) => buildFeed({ cityId: "larisa", now, store: memoryStore(), fixture: { read } });
+const prefs = (p: Partial<Prefs> = {}): Prefs => ({ locationId: "gn:258576", placeIds: [], terms: [], categories: [], saved: [], ...p });
+const LARISSA = DEFAULT_LOCATION;
+const feed = (now = NOW) => buildFeed({ location: LARISSA, now, store: memoryStore(), fixture: { read } });
 const byId = (f: Feed, id: string) => f.notices.find((n) => n.id === id)!;
 
 test("Greek folding ignores accents, case and final sigma", () => {
@@ -79,8 +81,8 @@ test("road works: successive announcements become one thread; no end date is inv
   assert.equal(lead.related.length, 2);
   assert.ok(lead.segments[0]!.streets.includes("Φαρσάλων"));
   assert.equal(lead.end, undefined);
-  assert.equal(statusOf(lead, NOW, TZ).state, "open_ended");
-  assert.equal(statusOf(lead, NOW + 20 * 86400000, TZ).state, "stale");
+  assert.equal(statusOf(lead, NOW).state, "open_ended");
+  assert.equal(statusOf(lead, NOW + 20 * 86400000).state, "stale");
   assert.ok(!f.notices.some((n) => n.id === "larissa-wp:184188" || n.id === "larissa-wp:184154"));
 });
 
@@ -95,24 +97,25 @@ test("MeteoAlarm: only warnings for Thessaly, severity exactly as the source sta
   const f = await feed();
   const w = f.notices.filter((n) => n.category === "weather");
   assert.equal(w.length, 4);
-  const orange = w.filter((n) => n.severity?.level === "orange");
+  const orange = w.filter((n) => n.severity?.code === "orange");
   assert.equal(orange.length, 2);
-  for (const n of orange) assert.equal(statusOf(n, NOW, TZ).state, "active");
+  for (const n of orange) { assert.equal(statusOf(n, NOW).state, "active"); assert.equal(n.severity?.rank, 3); assert.equal(n.severity?.label.el, "Πορτοκαλί Προειδοποίηση"); }
   const yellow = w.find((n) => n.id.endsWith("261024111900.001000001"))!;
-  assert.equal(statusOf(yellow, NOW, TZ).state, "expired");
+  assert.equal(statusOf(yellow, NOW).state, "expired");
 });
 
 test("status: before, during and after a water interruption", async () => {
   const f = await feed();
   const n = byId(f, "deyal-water:3727");
-  assert.equal(statusOf(n, Date.parse("2026-10-26T06:00:00Z"), TZ).state, "upcoming");
-  assert.equal(statusOf(n, Date.parse("2026-10-26T08:00:00Z"), TZ).state, "active");
-  assert.equal(statusOf(n, Date.parse("2026-10-26T10:00:00Z"), TZ).state, "ended");
-  assert.equal(statusOf(n, Date.parse("2026-11-20T10:00:00Z"), TZ).state, "archived");
+  assert.equal(statusOf(n, Date.parse("2026-10-26T06:00:00Z")).state, "upcoming");
+  assert.equal(statusOf(n, Date.parse("2026-10-26T08:00:00Z")).state, "active");
+  assert.equal(statusOf(n, Date.parse("2026-10-26T10:00:00Z")).state, "ended");
+  assert.equal(statusOf(n, Date.parse("2026-11-20T10:00:00Z")).state, "archived");
 });
 
 test("a failing source is reported as failing, not as an empty city", async () => {
-  const f = await buildFeed({ cityId: "larisa", now: NOW, store: memoryStore(), get: async () => { throw new Error("ECONNRESET"); } });
+  clearSharedCache();
+  const f = await buildFeed({ location: LARISSA, now: NOW, store: memoryStore(), get: async () => { throw new Error("ECONNRESET"); } });
   for (const s of f.sources.filter((x) => x.method !== "link-only")) assert.equal(s.state, "error");
   assert.equal(f.notices.length, 0);
   assert.equal(f.mode, "live");
@@ -120,27 +123,29 @@ test("a failing source is reported as failing, not as an empty city", async () =
 
 test("after a failure, the last good snapshot is kept with its old verification time and marked unverified", async () => {
   const store = memoryStore();
-  const good = await buildFeed({ cityId: "larisa", now: NOW, store, get: async (url) => {
+  clearSharedCache();
+  const good = await buildFeed({ location: LARISSA, now: NOW, store, get: async (url) => {
     const map: Record<string, string> = { "feeds.meteoalarm.org": "meteoalarm-greece.json", "deyal.gr": "deyal-water.rss", "www.larissa.gov.gr": "larissa-wp.json" };
     return read(map[new URL(url).host]!);
   } });
   assert.ok(good.sources.every((s) => s.state === "ok" || s.state === "link-only"));
   const later = NOW + 3600_000;
-  const bad = await buildFeed({ cityId: "larisa", now: later, store, get: async () => { throw new Error("timeout"); } });
+  clearSharedCache();
+  const bad = await buildFeed({ location: LARISSA, now: later, store, get: async () => { throw new Error("timeout"); } });
   const deyal = bad.sources.find((s) => s.id === "deyal-water")!;
   assert.equal(deyal.state, "stale");
   const n = bad.notices.find((x) => x.id === "deyal-water:3724")!;
   assert.equal(n.lastVerifiedAt, new Date(NOW).toISOString());
   const failed = new Set(bad.sources.filter((s) => s.state !== "ok").map((s) => s.id));
-  assert.equal(statusOf(n, later, TZ, failed).unverified, true);
+  assert.equal(statusOf(n, later, failed).unverified, true);
 });
 
 test("relevance and priority follow the person's places; counts come from records", async () => {
   const f = await feed();
-  const r = rows(f.notices, prefs({ terms: ["Χαροκοπου"] }), NOW, TZ, new Set());
+  const r = rows(f.notices, prefs({ terms: ["Χαροκοπου"] }), NOW, new Set());
   assert.equal(r.find((x) => x.n.id === "deyal-water:3718")!.rel, "mine"); // accent-free street match
-  const s = sections(rows(f.notices, prefs(), NOW, TZ, new Set()), prefs(), NOW);
-  assert.deepEqual(s.priority.map((x) => x.n.severity?.level), ["orange", "orange"]);
+  const s = sections(rows(f.notices, prefs(), NOW, new Set()), prefs(), NOW);
+  assert.deepEqual(s.priority.map((x) => x.n.severity?.code), ["orange", "orange"]);
   assert.equal(s.counts.next7, 1); // the market day moved to Tuesday
   assert.equal(s.upcoming[0]!.n.id, "larissa-wp:184419");
 });
@@ -150,7 +155,7 @@ test("search is accent-insensitive and needs every word", async () => {
   const hit = (q: string) => f.notices.filter((n: Notice) => matches(n, q)).map((n) => n.id);
   assert.ok(hit("φαλανη").includes("deyal-water:3727"));
   assert.ok(hit("ΛΑΪΚΕΣ ΑΓΟΡΕΣ").includes("larissa-wp:184419"));
-  assert.ok(hit("water Γιάννουλη").length >= 2);
+  assert.ok(hit("water interruption Γιάννουλη").length >= 2); // English headline + Greek place
   assert.deepEqual(hit("φαλανη αγορες"), []);
 });
 

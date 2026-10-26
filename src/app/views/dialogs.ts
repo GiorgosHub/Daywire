@@ -1,12 +1,13 @@
-// Places and preferences dialogs (native <dialog>: focus is trapped and Escape closes).
-import { CATEGORY_LABEL } from "../../domain/build.ts";
-import { CITIES, cityById } from "../../domain/cities.ts";
+// Dialogs (native <dialog>: focus is trapped and Escape closes): location picker, places, preferences.
+import { localityFor } from "../../domain/localities.ts";
 import { fold } from "../../domain/greek.ts";
-import type { Category } from "../../domain/types.ts";
+import type { Coverage, GeoLocation } from "../../domain/types.ts";
+import { CATEGORIES } from "../../domain/categories.ts";
 import { clear, h, icon } from "../dom.ts";
-import { setLang, t, tx, type Lang } from "../i18n.ts";
+import { clock, getLang, LANGS, M, setLang, tx, type Lang } from "../i18n/index.ts";
 import { wipe } from "../prefs.ts";
-import { rerender, S, update } from "../state.ts";
+import { removeLocation, rerender, S, saveLocation, savedEntry, switchTo, update, updateEntry } from "../state.ts";
+import { coverageBadge } from "./home.ts";
 
 export function modal(id: string, title: string, body: (close: () => void) => (Node | null)[], opts: { wide?: boolean; onClose?: () => void } = {}): HTMLDialogElement {
   document.getElementById(id)?.remove();
@@ -17,7 +18,7 @@ export function modal(id: string, title: string, body: (close: () => void) => (N
   dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
   dlg.append(
     h("header", { class: "dlg-head" }, h("h2", { id: `${id}-h` }, title),
-      h("button", { type: "button", class: "btn-icon", "aria-label": t("Κλείσιμο", "Close"), onclick: close }, icon("close"))),
+      h("button", { type: "button", class: "btn-icon", "aria-label": M().close, onclick: close }, icon("close"))),
     h("div", { class: "dlg-body" }, ...body(close).filter((x): x is Node => x !== null)),
   );
   document.body.append(dlg);
@@ -25,80 +26,176 @@ export function modal(id: string, title: string, body: (close: () => void) => (N
   return dlg;
 }
 
-export function openPlaces(): void {
-  const render = (box: HTMLElement, filter: string) => {
-    clear(box);
-    const city = cityById(S.prefs.cityId)!;
-    const list = city.places.filter((p) => !filter || fold(tx(p.name)).includes(fold(filter)) || p.aliases.some((a) => fold(a).includes(fold(filter))));
-    box.append(
-      h("fieldset", { class: "places" }, h("legend", { class: "sr" }, t("Γειτονιές και κοινότητες", "Neighbourhoods and communities")),
-        list.length ? list.map((p) => {
-          const on = S.prefs.placeIds.includes(p.id);
-          return h("label", { class: `place${on ? " on" : ""}` },
-            h("input", { type: "checkbox", checked: on, onchange: () => { update({ placeIds: on ? S.prefs.placeIds.filter((x) => x !== p.id) : [...S.prefs.placeIds, p.id] }); render(box, filter); } }),
-            h("span", {}, tx(p.name)), h("span", { class: "muted" }, p.kind === "community" ? t("κοινότητα", "community") : p.kind === "city" ? t("πόλη", "city") : ""));
-        }) : h("p", { class: "muted" }, t("Καμία γειτονιά με αυτό το όνομα. Μπορείς να το προσθέσεις ως οδό ή περιοχή παρακάτω.", "No neighbourhood by that name. You can add it as a street or area below."))),
+type Hit = { location: GeoLocation; coverage: Pick<Coverage, "level" | "connected"> & { categories: string[] } };
+
+export const placeLine = (l: GeoLocation) => [tx(l.admin1), tx(l.country)].filter(Boolean).join(", ");
+
+/** Worldwide location search (no GPS), saved locations, and the places where DAYWIRE has sources. */
+export function openLocations(): void {
+  const m = M();
+  let ctl: AbortController | undefined;
+  let hits: Hit[] = [];
+  let active = -1;
+  const input = h("input", {
+    id: "loc-q", type: "search", autocomplete: "off", spellcheck: "false", placeholder: m.locSearchPlaceholder,
+    role: "combobox", "aria-expanded": "false", "aria-controls": "loc-results", "aria-autocomplete": "list", "aria-describedby": "loc-hint",
+  }) as HTMLInputElement;
+  const status = h("p", { id: "loc-status", class: "muted small", role: "status", "aria-live": "polite" });
+  const list = h("ul", { id: "loc-results", class: "loc-results", role: "listbox", "aria-label": m.locResults });
+  const idle = h("div", { class: "loc-idle" });
+
+  let close: () => void = () => {};
+  const choose = (loc: GeoLocation) => { close(); switchTo(loc); };
+
+  const option = (hit: Hit, i: number) => {
+    const l = hit.location;
+    return h("li", { id: `loc-opt-${i}`, role: "option", class: "loc-opt", "aria-selected": i === active ? "true" : "false", onclick: () => choose(l) },
+      h("span", { class: "loc-main" }, h("strong", {}, tx(l.name)), h("span", { class: "muted" }, ` · ${placeLine(l)}`)),
+      h("span", { class: "loc-meta" }, coverageBadge(hit.coverage.level), h("span", { class: "muted small" }, m.localTime(clock(Date.now(), l.tz)))),
     );
   };
-  modal("dlg-places", t("Τα μέρη μου", "My places"), () => {
+  const drawHits = () => {
+    clear(list);
+    list.append(...hits.map(option));
+    input.setAttribute("aria-expanded", hits.length ? "true" : "false");
+    if (active >= 0) input.setAttribute("aria-activedescendant", `loc-opt-${active}`); else input.removeAttribute("aria-activedescendant");
+    idle.hidden = Boolean(input.value.trim());
+  };
+
+  let timer = 0;
+  const search = (q: string) => {
+    ctl?.abort();
+    active = -1;
+    if ([...q.trim()].length < 2) { hits = []; status.textContent = ""; drawHits(); return; }
+    ctl = new AbortController();
+    status.textContent = m.searching;
+    const sig = ctl.signal;
+    fetch(`/api/places?q=${encodeURIComponent(q.trim())}&lang=${getLang()}`, { signal: sig })
+      .then(async (r) => { if (!r.ok) throw new Error(String(r.status)); return (await r.json()) as { results: Hit[] }; })
+      .then((j) => { hits = j.results; status.textContent = hits.length ? m.found(hits.length) : m.noPlaceFound(q.trim()); drawHits(); })
+      .catch((e: unknown) => { if ((e as Error).name === "AbortError") return; hits = []; status.textContent = m.searchUnavailable; drawHits(); });
+  };
+  input.addEventListener("input", () => { clearTimeout(timer); timer = window.setTimeout(() => search(input.value), 250); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" && hits.length) { e.preventDefault(); active = (active + 1) % hits.length; drawHits(); }
+    else if (e.key === "ArrowUp" && hits.length) { e.preventDefault(); active = (active - 1 + hits.length) % hits.length; drawHits(); }
+    else if (e.key === "Enter" && hits.length) { e.preventDefault(); choose(hits[Math.max(active, 0)]!.location); }
+  });
+
+  // saved locations and the places with sources
+  const drawIdle = () => {
+    clear(idle);
+    const saved = S.prefs.locations;
+    if (saved.length) idle.append(h("h3", {}, m.yourLocations), h("ul", { class: "saved-locs" }, saved.map((s) => {
+      const label = h("input", { type: "text", value: s.label ?? "", maxlength: 40, placeholder: m.labelPlaceholder, "aria-label": m.labelFor(tx(s.location.name)) }) as HTMLInputElement;
+      label.addEventListener("change", () => updateEntry(s.location.id, { label: label.value.trim() || undefined }));
+      return h("li", { class: s.location.id === S.current?.id ? "on" : "" },
+        h("button", { type: "button", class: "loc-pick", onclick: () => choose(s.location), "aria-current": s.location.id === S.current?.id ? "true" : null },
+          h("strong", {}, tx(s.location.name)), h("span", { class: "muted small" }, placeLine(s.location))),
+        label,
+        h("button", { type: "button", class: "btn-icon small", "aria-label": m.removeLocation(tx(s.location.name)), onclick: () => { removeLocation(s.location.id); drawIdle(); } }, icon("close", "ic ic-s")),
+      );
+    })));
+    idle.append(h("h3", {}, m.withSources), h("ul", { class: "featured" }, h("li", { class: "muted small" }, m.loading)));
+    fetch(`/api/places?q=&lang=${getLang()}`).then((r) => r.json() as Promise<{ results: Hit[] }>).then((j) => {
+      const ul = idle.querySelector(".featured");
+      if (!ul) return;
+      clear(ul);
+      ul.append(...j.results.map((hit) => h("li", {}, h("button", { type: "button", class: "loc-pick", onclick: () => choose(hit.location) },
+        h("strong", {}, tx(hit.location.name)), h("span", { class: "muted small" }, placeLine(hit.location))), coverageBadge(hit.coverage.level))));
+      ul.append(h("li", { class: "muted small" }, m.alsoCountries));
+    }).catch(() => { const ul = idle.querySelector(".featured"); if (ul) { clear(ul); ul.append(h("li", { class: "muted small" }, m.searchUnavailable)); } });
+  };
+  drawIdle();
+
+  modal("dlg-locations", m.locationsTitle, (c) => {
+    close = c;
+    return [
+      h("label", { class: "field" }, h("span", {}, m.findAPlace), h("div", { class: "search" }, icon("search"), input)),
+      h("p", { id: "loc-hint", class: "muted small" }, m.locHint),
+      status, list, idle,
+      h("p", { class: "muted small attrib" }, m.geoAttribution),
+    ];
+  }, { onClose: rerender });
+  input.focus();
+}
+
+/** Neighbourhoods (where we have a profile) and streets for the location being viewed. */
+export function openPlaces(): void {
+  const m = M();
+  const loc = S.current;
+  if (!loc) return openLocations();
+  if (!savedEntry(loc.id)) saveLocation(loc);
+  const locality = localityFor(loc.geonameId);
+  const render = (box: HTMLElement, filter: string) => {
+    clear(box);
+    if (!locality) return;
+    const e = savedEntry(loc.id)!;
+    const list = locality.places.filter((p) => !filter || Object.values(p.name).some((n) => fold(n).includes(fold(filter))) || p.aliases.some((a) => fold(a).includes(fold(filter))));
+    box.append(h("fieldset", { class: "places" }, h("legend", { class: "sr" }, m.neighbourhoods),
+      list.length ? list.map((p) => {
+        const on = e.placeIds.includes(p.id);
+        return h("label", { class: `place${on ? " on" : ""}` },
+          h("input", { type: "checkbox", checked: on, onchange: () => { updateEntry(loc.id, { placeIds: on ? e.placeIds.filter((x) => x !== p.id) : [...e.placeIds, p.id] }); render(box, filter); } }),
+          h("span", {}, tx(p.name)), h("span", { class: "muted" }, m.placeKind[p.kind]));
+      }) : h("p", { class: "muted" }, m.noNeighbourhood)));
+  };
+  modal("dlg-places", m.myPlacesIn(tx(loc.name)), () => {
     const box = h("div");
-    const find = h("input", { type: "search", id: "place-find", placeholder: t("Αναζήτηση γειτονιάς", "Find a neighbourhood"), autocomplete: "off" }) as HTMLInputElement;
+    const find = h("input", { type: "search", id: "place-find", placeholder: m.findNeighbourhood, autocomplete: "off" }) as HTMLInputElement;
     find.addEventListener("input", () => render(box, find.value));
     render(box, "");
-    const term = h("input", { type: "text", id: "term", maxlength: 60, placeholder: t("π.χ. Παλαιολόγου", "e.g. Παλαιολόγου"), autocomplete: "off" }) as HTMLInputElement;
+    const term = h("input", { type: "text", id: "term", maxlength: 60, placeholder: m.streetPlaceholder, autocomplete: "off" }) as HTMLInputElement;
     const terms = h("ul", { class: "terms" });
     const drawTerms = () => {
       clear(terms);
-      for (const x of S.prefs.terms) terms.append(h("li", {}, x, h("button", { type: "button", class: "btn-icon small", "aria-label": t(`Αφαίρεση ${x}`, `Remove ${x}`), onclick: () => { update({ terms: S.prefs.terms.filter((y) => y !== x) }); drawTerms(); } }, icon("close", "ic ic-s"))));
+      for (const x of savedEntry(loc.id)?.terms ?? []) terms.append(h("li", {}, x, h("button", { type: "button", class: "btn-icon small", "aria-label": m.removeTerm(x), onclick: () => { updateEntry(loc.id, { terms: (savedEntry(loc.id)?.terms ?? []).filter((y) => y !== x) }); drawTerms(); } }, icon("close", "ic ic-s"))));
     };
     drawTerms();
     const add = (e: Event) => {
       e.preventDefault();
       const v = term.value.trim();
-      if (v.length < 3) { term.setCustomValidity(t("Τουλάχιστον 3 γράμματα", "At least 3 letters")); term.reportValidity(); return; }
+      if ([...v].length < 3) { term.setCustomValidity(m.atLeast3); term.reportValidity(); return; }
       term.setCustomValidity("");
-      if (!S.prefs.terms.some((x) => fold(x) === fold(v))) update({ terms: [...S.prefs.terms, v] });
+      const cur = savedEntry(loc.id)?.terms ?? [];
+      if (!cur.some((x) => fold(x) === fold(v))) updateEntry(loc.id, { terms: [...cur, v] });
       term.value = "";
       drawTerms();
     };
     term.addEventListener("input", () => term.setCustomValidity(""));
     return [
-      h("label", { class: "field" }, h("span", {}, t("Πόλη", "City")),
-        h("select", { disabled: CITIES.length < 2 }, CITIES.map((c) => h("option", { value: c.id, selected: c.id === S.prefs.cityId }, tx(c.name))))),
-      h("p", { class: "muted small" }, t("Προς το παρόν μόνο η Λάρισα έχει συνδεδεμένες πηγές. Νέες πόλεις προστίθενται όταν επαληθεύσουμε τις πηγές τους.", "Only Larissa has connected sources for now. Cities are added once their sources are verified.")),
-      h("label", { class: "field" }, h("span", {}, t("Γειτονιές και κοινότητες", "Neighbourhoods and communities")), find),
-      box,
+      locality ? h("label", { class: "field" }, h("span", {}, m.neighbourhoods), find) : h("p", { class: "muted small" }, m.noLocality),
+      locality ? box : null,
       h("form", { class: "field", onsubmit: add },
-        h("label", { for: "term" }, t("Οδός ή περιοχή που σε ενδιαφέρει", "A street or area you care about")),
-        h("div", { class: "row" }, term, h("button", { type: "submit", class: "btn" }, icon("plus", "ic ic-s"), t("Προσθήκη", "Add"))),
-        h("p", { class: "muted small" }, t("Ταιριάζει με τις οδούς και περιοχές που αναφέρει ρητά μια ανακοίνωση. Δεν μαντεύουμε τι βρίσκεται κοντά.", "Matched against the streets and areas a notice names explicitly. We don't guess what is nearby.")),
+        h("label", { for: "term" }, m.streetLabel),
+        h("div", { class: "row" }, term, h("button", { type: "submit", class: "btn" }, icon("plus", "ic ic-s"), m.add)),
+        h("p", { class: "muted small" }, m.streetHint),
       ),
       terms,
-      h("p", { class: "muted small" }, t("Τα μέρη σου αποθηκεύονται μόνο σε αυτόν τον browser.", "Your places are stored only in this browser.")),
+      h("p", { class: "muted small" }, m.storedLocally),
     ];
   }, { onClose: rerender });
 }
 
 export function openPrefs(): void {
-  const cats: Category[] = ["weather", "water", "roads", "services", "power", "transport", "emergency", "announcement"];
-  modal("dlg-prefs", t("Προτιμήσεις", "Preferences"), (close) => [
-    h("fieldset", { class: "field" }, h("legend", {}, t("Γλώσσα", "Language")),
-      h("div", { class: "seg" }, (["el", "en"] as Lang[]).map((l) => h("button", { type: "button", "aria-pressed": S.prefs.lang === l ? "true" : "false", lang: l, onclick: () => { setLang(l); update({ lang: l }); close(); openPrefs(); } }, l === "el" ? "Ελληνικά" : "English"))),
-      h("p", { class: "muted small" }, t("Οι ανακοινώσεις μένουν στα ελληνικά, όπως δημοσιεύτηκαν. Μεταφράζουμε μόνο το περιβάλλον.", "Notices stay in Greek as published. Only the interface is translated."))),
-    h("fieldset", { class: "field" }, h("legend", {}, t("Κατηγορίες που ακολουθείς", "Categories you follow")),
-      h("p", { class: "muted small" }, t("Αν δεν επιλέξεις καμία, βλέπεις όλες. Οι ανακοινώσεις προτεραιότητας εμφανίζονται πάντα.", "Choose none to see all. Priority notices always show.")),
-      h("div", { class: "checks" }, cats.map((c) => {
+  const m = M();
+  modal("dlg-prefs", m.preferences, (close) => [
+    h("fieldset", { class: "field" }, h("legend", {}, m.language),
+      h("div", { class: "seg" }, (Object.keys(LANGS) as Lang[]).map((l) => h("button", { type: "button", "aria-pressed": getLang() === l ? "true" : "false", lang: l, onclick: () => { setLang(l); update({ lang: l }); close(); openPrefs(); } }, LANGS[l].label))),
+      h("p", { class: "muted small" }, m.languageNote)),
+    h("fieldset", { class: "field" }, h("legend", {}, m.followedCategories),
+      h("p", { class: "muted small" }, m.followedHint),
+      h("div", { class: "checks" }, CATEGORIES.map((c) => {
         const on = S.prefs.categories.includes(c);
-        return h("label", { class: "check" }, h("input", { type: "checkbox", checked: on, onchange: () => update({ categories: on ? S.prefs.categories.filter((x) => x !== c) : [...S.prefs.categories, c] }) }), icon(c, "ic ic-s"), tx(CATEGORY_LABEL[c]));
+        return h("label", { class: "check" }, h("input", { type: "checkbox", checked: on, onchange: () => update({ categories: on ? S.prefs.categories.filter((x) => x !== c) : [...S.prefs.categories, c] }) }), icon(c, "ic ic-s"), m.cat[c]);
       }))),
-    h("fieldset", { class: "field" }, h("legend", {}, t("Ειδοποιήσεις", "Notifications")),
-      h("p", { class: "muted small" }, t("Δεν στέλνουμε ειδοποιήσεις push. Όταν επιστρέφεις, σημειώνουμε ό,τι είναι νέο από την τελευταία σου επίσκεψη. Για έκτακτες ανάγκες ισχύει μόνο το 112.", "We don't send push notifications. When you come back, we mark what is new since your last visit. For emergencies, rely on 112."))),
-    h("fieldset", { class: "field" }, h("legend", {}, t("Τα δεδομένα σου", "Your data")),
-      h("p", { class: "muted small" }, t("Μέρη, αποθηκευμένα και προτιμήσεις μένουν μόνο σε αυτή τη συσκευή. Δεν έχουμε λογαριασμούς ούτε cookies παρακολούθησης.", "Places, saved items and preferences stay on this device. No accounts, no tracking cookies.")),
+    h("fieldset", { class: "field" }, h("legend", {}, m.notifications), h("p", { class: "muted small" }, m.notificationsNote)),
+    h("fieldset", { class: "field" }, h("legend", {}, m.yourData),
+      h("p", { class: "muted small" }, m.yourDataNote),
       h("button", { type: "button", class: "btn danger", onclick: (e: Event) => {
         const b = e.currentTarget as HTMLButtonElement;
-        if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = t("Πάτα ξανά για να διαγραφούν μέρη, αποθηκευμένα και προτιμήσεις", "Press again to delete places, saved items and preferences"); return; }
+        if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = m.deleteConfirm; return; }
         wipe(); location.hash = "#/"; location.reload();
-      } }, t("Διαγραφή όλων από αυτή τη συσκευή", "Delete everything from this device"))),
+      } }, m.deleteAll)),
   ], { onClose: rerender });
 }
