@@ -141,10 +141,20 @@ try {
   });
   await check("sources page: this location's health and the worldwide registry", async () => {
     await page.goto(BASE + "#/sources", { waitUntil: "load" });
-    await page.waitForFunction(() => document.querySelectorAll(".src-table").length === 2 && document.querySelectorAll(".src-table")[1].querySelectorAll("tbody tr").length >= 8, null, { timeout: 15000 });
-    const reg = await page.locator(".src-table").nth(1).textContent();
+    await page.waitForFunction(() => document.querySelectorAll(".src-table:not(.cty-table)").length === 2 && document.querySelectorAll(".src-table:not(.cty-table)")[1].querySelectorAll("tbody tr").length >= 8, null, { timeout: 15000 });
+    const reg = await page.locator(".src-table:not(.cty-table)").nth(1).textContent();
     assert(reg.includes("United States") || reg.includes("ΗΠΑ"), "US listed");
     assert(reg.includes("Χρειάζεται κλειδί") || reg.includes("Συνδεδεμένη"), "states shown");
+  });
+  await check("sources page: countries carry an earned status with what they cover and when they were checked", async () => {
+    await page.waitForSelector(".cty-table tbody tr", { timeout: 15000 });
+    const rows = await page.locator(".cty-table tbody tr").evaluateAll((trs) => trs.map((tr) => [tr.className, tr.textContent]));
+    assert(rows.filter(([c]) => c === "cty-row-supported").length === 7, `7 supported, got ${rows.filter(([c]) => c === "cty-row-supported").length}`);
+    const at = rows.find(([, t]) => t.includes("Αυστρία") || t.includes("Austria"));
+    assert(at && at[0] === "cty-row-provisional", "Austria provisional");
+    const jp = rows.find(([, t]) => t.includes("Ιαπωνία") || t.includes("Japan"));
+    assert(jp && jp[0] === "cty-row-unsupported", "Japan not covered");
+    assert(rows.some(([c, t]) => c === "cty-row-supported" && /2026-10-2[67]/.test(t)), "verification dates shown");
   });
   await check("motion shell: switching place with animation loads its feed; the wire marks now; compact bar after scroll", async () => {
     await page.goto(BASE + "#/", { waitUntil: "load" }); await ready(page);

@@ -36,6 +36,14 @@ export function coverageBadge(level: Coverage["level"]): HTMLElement {
   return h("span", { class: `cov cov-${level}` }, h("span", { class: "cov-bars", "aria-hidden": "true" }, h("i"), h("i"), h("i")), M().covLevel[level]);
 }
 
+export type CountryStatus = "supported" | "partial" | "provisional" | "unsupported";
+/** The country's earned status, as a small chip with the full wording for assistive tech and on hover. */
+export function countryChip(status: CountryStatus | undefined, short = true): HTMLElement | null {
+  if (!status) return null;
+  const m = M();
+  return h("span", { class: `cty cty-${status}`, title: m.ctyStatus[status] }, short ? h("span", { "aria-hidden": "true" }, m.ctyShort[status]) : m.ctyStatus[status], short ? h("span", { class: "sr" }, m.ctyStatus[status]) : null);
+}
+
 /** Eight segments, one per category, lit by its coverage state; the connected count in the middle. */
 export function coverageRing(c: Coverage): HTMLElement {
   const NS = "http://www.w3.org/2000/svg";
@@ -63,7 +71,7 @@ function coveragePanel(f: Feed): HTMLElement {
   const byCat = new Map(f.coverage.categories.map((c) => [c.category, c]));
   const name = (id: string) => tx(f.sources.find((s) => s.id === id)?.name) || id;
   return h("section", { class: "coverage", "aria-labelledby": "cov-h" },
-    h("div", { class: "cov-head" }, h("h2", { id: "cov-h" }, m.coverageTitle), coverageBadge(f.coverage.level)),
+    h("div", { class: "cov-head" }, h("h2", { id: "cov-h" }, m.coverageTitle), coverageBadge(f.coverage.level), countryChip(f.country, false)),
     h("div", { class: "cov-top" }, coverageRing(f.coverage), h("p", { class: "cov-lead" }, m.covLead[f.coverage.level](tx(f.location.name)))),
     h("ul", { class: "cov-list" }, ORDER.map((c) => {
       const cc = byCat.get(c)!;

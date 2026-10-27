@@ -4,6 +4,7 @@ import { FEATURED } from "../src/domain/localities.ts";
 import { fold } from "../src/domain/greek.ts";
 import type { GeoLocation } from "../src/domain/types.ts";
 import { coverageFor } from "../src/server/coverage.ts";
+import { countryStatus } from "../src/sources/countries.ts";
 import { geocoder, type Req, type Res } from "./feed.ts";
 
 const cache = new Map<string, { at: number; body: unknown }>();
@@ -11,7 +12,7 @@ const cache = new Map<string, { at: number; body: unknown }>();
 function withCoverage(locs: GeoLocation[]) {
   return locs.map((location) => {
     const c = coverageFor(location, process.env);
-    return { location, coverage: { level: c.level, connected: c.connected, categories: c.categories.filter((x) => x.state === "connected").map((x) => x.category) } };
+    return { location, country: countryStatus(location.countryCode), coverage: { level: c.level, connected: c.connected, categories: c.categories.filter((x) => x.state === "connected").map((x) => x.category) } };
   });
 }
 

@@ -40,6 +40,20 @@ export interface SourceDef {
   contacts?: { label: LText; phone: string; checkedOn: string; url: string }[];
   /** How long one response may be reused across locations and requests (seconds). */
   ttl?: number;
+  /** A finer test than `coverage`, for sources that can only be matched to some places within it (e.g. by district). */
+  appliesTo?: (loc: GeoLocation) => boolean;
+  /** How and when the endpoint was checked against the live source. */
+  verified?: Verification;
+}
+
+/** Evidence that a source works, recorded when it was checked by hand (never inferred from code or mocked tests). */
+export interface Verification {
+  on: string; // YYYY-MM-DD
+  method: "browser" | "server" | "shell";
+  /** A real record (not an empty answer, not a documentation example) was read and parsed. */
+  realRecord: boolean;
+  what: string; // one line: what was seen
+  fixture?: string;
 }
 
 export interface AdapterContext {

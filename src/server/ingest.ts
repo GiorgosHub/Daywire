@@ -8,6 +8,7 @@ import { fetchText } from "../sources/http.ts";
 import { disabledFrom, missingConfig, sourcesFor } from "../sources/registry.ts";
 import type { SourceDef } from "../sources/types.ts";
 import { coverageFor } from "./coverage.ts";
+import { countryStatus } from "../sources/countries.ts";
 import type { Store } from "./store.ts";
 
 interface SourceState {
@@ -136,6 +137,7 @@ export async function buildFeed(o: IngestOpts): Promise<Feed> {
     mode: o.fixture ? "fixture" : "live",
     durableStore: o.store.durable,
     coverage: coverageFor(loc, env),
+    country: countryStatus(loc.countryCode),
     sources: results.map((r) => r.health),
     notices,
   });

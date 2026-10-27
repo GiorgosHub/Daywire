@@ -251,3 +251,14 @@ details[open] .chev { transform: rotate(90deg); }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface-2); color: var(--slate); }
 .pill.p-connected { background: var(--st-upcoming-bg); color: var(--st-upcoming-ink); }
 .pill.p-needs-config, .pill.p-link-only { background: var(--st-stale-bg); color: var(--st-stale-ink); }
+
+/* Country status: earned, not selected. Filled = supported, outline = partial, dashed = provisional, faint = not covered.
+   No colour: status is not a warning, and colour on this board means a warning level. */
+.cty { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 3px; font: 600 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; border: 1px solid currentColor; }
+.cty-supported { background: var(--ink, #151515); border-color: var(--ink, #151515); color: var(--paper, #ECEAE6); }
+.cty-partial { color: var(--ink, #151515); }
+.cty-provisional { color: var(--ink, #151515); border-style: dashed; }
+.cty-unsupported { color: var(--slate); border-color: transparent; background: var(--surface-2, rgba(0,0,0,.06)); }
+.cty-table td:nth-child(3), .cty-table td:nth-child(4) { min-width: 16ch; }
+.loc-meta .cty { margin-inline-start: 6px; }
+.cov-head .cty { margin-inline-start: 8px; }

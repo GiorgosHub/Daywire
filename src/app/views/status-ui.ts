@@ -40,7 +40,7 @@ export function statusChip(r: Row, now: number): HTMLElement {
 export function severityChip(n: Notice): HTMLElement | null {
   const s = n.severity;
   if (!s) return null;
-  const cls = s.scheme === "meteoalarm" ? `sev-${s.code}` : `sev-r${s.rank}`;
+  const cls = s.scheme === "meteoalarm" || s.scheme === "colour" ? `sev-${s.code}` : `sev-r${s.rank}`;
   return h("span", { class: `chip sev ${cls}`, title: M().severityBy(tx(n.publisher)) }, icon("alert", "ic ic-s"), tx(s.label));
 }
 

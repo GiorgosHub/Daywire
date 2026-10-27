@@ -14,7 +14,14 @@
 | Anywhere in the USA | National Weather Service alerts | limited |
 | Anywhere in England | Environment Agency flood warnings within 10 km | limited |
 | Six Greek regions (Thessaly, Attica, Central Macedonia, Epirus, Crete, North Aegean) | ΕΜΥ weather warnings | limited |
+| Anywhere in Canada, Germany, Norway, Sweden, Finland | the national weather service's warnings (ECCC, DWD, MET Norway, SMHI, FMI) | limited (Sweden: 2 categories) |
+| Anywhere in Italy | Civil Protection flood, landslide and thunderstorm alert bulletin | limited |
+| Portugal: mainland districts, Azores, Funchal, Porto Santo | IPMA weather warnings | limited |
+| Austria (provisional) | GeoSphere Austria warnings; no real warning read yet | limited |
 | Everywhere else | — | none: the page says so and shows no feed |
+
+Each country's earned status (supported, partial, provisional, not covered) and what it covers is on the Sources
+page and in [docs/sources.md](docs/sources.md#countries).
 
 Details and terms are in [docs/sources.md](docs/sources.md).
 
@@ -54,6 +61,7 @@ Import the repo; `vercel.json` sets the build. Optional environment variables:
 | `TFL_APP_KEY` | Enables TfL line status for London (register at api-portal.tfl.gov.uk). |
 | `OPEN_METEO_API_KEY` | Uses Open-Meteo's paid geocoding endpoint (needed for commercial use). |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`) | Durable store: first-seen times, backoff, stale snapshots across instances. |
+| `GITHUB_TOKEN` | Optional. A read-only token for listing Italy's bulletins through the GitHub API without the shared 60-requests-per-hour limit. |
 | `DAYWIRE_DISABLED_SOURCES` | Comma-separated source ids to switch off without a code change. |
 
 `DAYWIRE_FIXTURES=1` works only locally and is refused on Vercel.

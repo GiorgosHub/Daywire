@@ -75,7 +75,7 @@ export type SourceRef = z.infer<typeof SourceRef>;
 /** The source's own classification, shown with the source's own words. `rank` (1 low … 4 high) is a documented
  *  per-scheme mapping used only for ordering and priority (see docs/data-model.md). */
 export const Severity = z.object({
-  scheme: z.enum(["meteoalarm", "cap", "ea-flood", "tfl"]),
+  scheme: z.enum(["meteoalarm", "colour", "cap", "ea-flood", "tfl"]),
   code: z.string(),
   label: LText,
   rank: z.number().int().min(1).max(4),
@@ -167,6 +167,8 @@ export const Feed = z.object({
   mode: z.enum(["live", "fixture"]),
   durableStore: z.boolean(),
   coverage: Coverage,
+  /** The country's earned status (src/sources/countries.ts), independent of this location's notices. */
+  country: z.enum(["supported", "partial", "provisional", "unsupported"]).optional(),
   sources: z.array(SourceHealth),
   notices: z.array(Notice),
 });
