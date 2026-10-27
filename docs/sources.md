@@ -2,8 +2,12 @@
 
 Every connected source below was reached and parsed live on 2026-10-26 or 2026-10-27 (through a browser, because the
 build machine has no general internet access). The real responses were saved in `tests/fixtures/` and are covered by
-tests. What has **not** been verified yet is a fetch from a Vercel server; run `node scripts/probe-live.mjs <url>`
-against the first deployment.
+tests. On 2026-10-27 the deployed server (daywireproject.vercel.app) was probed with `scripts/probe-live.mjs`'s
+cities: every source answered from Vercel except **ΔΕΥΑΛ, which returns HTTP 403 to Vercel's servers** (it answers a
+browser). We don't work around it; Larissa shows the water source as failing until ΔΕΥΑΛ allows the requests or
+offers another feed. Live records read server-side that day: HNMS (7 warnings for Thessaly), ECCC (frost advisory,
+Toronto), SMHI (water-shortage message, Stockholm), FMI (wind warning, Helsinki), DPC (187 zones, no alert), IPMA
+(203 records, all green), and empty-but-valid answers from NWS, DWD, MET Norway and GeoSphere.
 
 ## Countries
 
