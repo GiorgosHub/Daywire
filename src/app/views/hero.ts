@@ -83,16 +83,25 @@ export function startClocks(): void {
 }
 
 /** The hero: the city board in front of the city, then one line on what DAYWIRE is and where you can switch place. */
+// The hero is one element for the life of the page. Re-renders update it in place: the board turns only the cells
+// that changed, and the parts below it are rebuilt only when their content changed. Moving or rebuilding these
+// nodes would restart their animations (the LED strip, the pulses) and cost a layout for nothing.
+const heroEl = h("div", { class: "wrap hero" });
+const underEl = h("div", { class: "hero-under" });
+let underKey = "";
 export function hero(all: Row[], now: number): HTMLElement {
   const m = M();
   const f = S.feed;
   const foot: Node[] = [freshness(), f && f.location.id === S.current?.id ? coverageBadge(f.coverage.level) : null].filter(Boolean) as Node[];
   const board = cityBoard(all, now, ticker(all, now), foot);
-  const caption = f && f.coverage.level !== "none" && field
-    ? h("p", { class: "field-cap" }, (() => { const k = signalsFrom(all, now).length; return k ? m.fieldCaption(k) : m.fieldCaptionNone; })())
-    : null;
-  return h("div", { class: "wrap hero" }, board,
-    h("div", { class: "hero-under" }, h("p", { class: "sub" }, m.heroSub), locationChips(), caption));
+  if (heroEl.firstChild !== board) heroEl.replaceChildren(board, underEl);
+  const k = f && f.coverage.level !== "none" && field ? signalsFrom(all, now).length : -1;
+  const key = JSON.stringify([m.heroSub, k, S.prefs.locations.map((l) => [l.location.id, l.label]), S.current?.id]);
+  if (key !== underKey) {
+    underKey = key;
+    underEl.replaceChildren(h("p", { class: "sub" }, m.heroSub), ...[locationChips(), k >= 0 ? h("p", { class: "field-cap" }, k ? m.fieldCaption(k) : m.fieldCaptionNone) : null].filter(Boolean) as Node[]);
+  }
+  return heroEl;
 }
 
 function freshness(): HTMLElement {

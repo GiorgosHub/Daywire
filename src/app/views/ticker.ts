@@ -11,12 +11,23 @@ import { statusText } from "./status-ui.ts";
 
 const css = (c: [number, number, number]) => `rgb(${c.map((v) => Math.round(v * 255)).join(" ")})`;
 
+let cached: { key: string; el: HTMLElement } | null = null;
 export function ticker(all: Row[], now: number): HTMLElement | null {
   const f = S.feed;
   if (!f || f.coverage.level === "none" || f.location.id !== S.current?.id) return null;
   const m = M();
   const sig = new Map(signalsFrom(all, now).map((s) => [s.id, s]));
   const today = all.filter((r) => sig.has(r.n.id));
+  // same notices, same words, same language: keep the running strip (rebuilding it would jump it back to the start)
+  const key = JSON.stringify([f.location.id, m.tickerLabel, today.map((r) => [r.n.id, statusText(r.n, r.st, now).detail ?? ""])]);
+  if (cached?.key === key) return cached.el;
+  const el = build(today, sig, now);
+  cached = { key, el };
+  return el;
+}
+
+function build(today: Row[], sig: Map<string, ReturnType<typeof signalsFrom>[number]>, now: number): HTMLElement {
+  const m = M();
   if (!today.length) return h("section", { class: "ticker quiet", "aria-label": m.tickerLabel }, h("p", { class: "tk-quiet wrap" }, m.wireEmpty));
 
   const field = fieldApi();

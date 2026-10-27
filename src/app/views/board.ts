@@ -95,6 +95,8 @@ class Board {
   private foot: HTMLElement;
   private tickSlot: HTMLElement;
   private shownFor = "";
+  private footKey = "";
+  private plateKey = "";
   private scrambleTimer = 0;
   tz = viewerTz();
 
@@ -153,8 +155,9 @@ class Board {
     this.zone.textContent = loc && loc.tz !== viewerTz() ? zoneName(now, loc.tz) : "";
 
     // the plate: where, in plain words, with the date and the sun
-    this.plate.replaceChildren(...this.plateContent(now));
-    this.cols.replaceChildren(...this.colsContent(now));
+    const plate = this.plateContent(now), cols = this.colsContent(now);
+    const pk = [...plate, ...cols].map((n) => (n as HTMLElement).outerHTML).join("");
+    if (pk !== this.plateKey) { this.plateKey = pk; this.plate.replaceChildren(...plate); this.cols.replaceChildren(...cols); }
 
     // rows
     clearInterval(this.scrambleTimer);
@@ -167,8 +170,9 @@ class Board {
       lines.forEach((l, i) => this.slots[i]?.show(l, (fresh ? 500 : 0) + i * 140, true));
       for (let i = lines.length; i < this.slots.length; i++) this.slots[i]!.show(null, 0, true);
     }
-    this.foot.replaceChildren(...foot);
-    this.tickSlot.replaceChildren(...(ticker ? [ticker] : []));
+    const fk = foot.map((n) => (n as HTMLElement).outerHTML).join("");
+    if (fk !== this.footKey) { this.footKey = fk; this.foot.replaceChildren(...foot); }
+    if (this.tickSlot.firstChild !== ticker) this.tickSlot.replaceChildren(...(ticker ? [ticker] : []));
     this.el.style.setProperty("--at", `${(this.dayFrac(now) * 100).toFixed(2)}%`);
   }
 

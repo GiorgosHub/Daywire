@@ -187,13 +187,8 @@ html.js .rv.rv-done { transition-delay: 0s; transition-duration: 400ms; }
 .sec-head .link { margin-left: auto; }
 
 .card { transition: border-color var(--t) var(--ease), box-shadow 400ms var(--ease-out), transform 400ms var(--ease-out); }
-.card::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 300ms var(--ease);
-  background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgb(21 21 21 / 0.08), transparent 50%);
-}
 @media (hover: hover) {
   .card:hover { box-shadow: 0 10px 28px rgb(21 21 21 / 0.08), 0 2px 6px rgb(21 21 21 / 0.05); border-color: var(--line-2); }
-  .card:hover::after { opacity: 1; }
 }
 /* ——— the rail: the page's sections as stops on a wire, with a pulse at your reading position ——— */
 .rail { display: none; }

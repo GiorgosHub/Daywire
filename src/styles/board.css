@@ -45,7 +45,7 @@
 /* only the two moving halves of a turning cell get their own layer; at rest the board is flat */
 .fh.ft, .fh.fb { backface-visibility: hidden; }
 .fc.turning .fh.ft, .fc.turning .fh.fb { will-change: transform; }
-.fh > span { display: block; height: var(--ch); line-height: var(--ch); }
+.fh > span { display: block; height: var(--ch); line-height: var(--ch); color: var(--fc, var(--flap-ink)); }
 .fh.t, .fh.ft { top: 0; border-radius: 3px 3px 0 0; transform-origin: 50% 100%; background: linear-gradient(var(--flap-top), var(--flap-top-2)); }
 .fh.b, .fh.fb { bottom: 0; border-radius: 0 0 3px 3px; transform-origin: 50% 0; background: linear-gradient(var(--flap-bot), var(--flap-bot-2)); }
 .fh.b > span, .fh.fb > span { transform: translateY(-50%); }
@@ -55,7 +55,8 @@
 .fc::after { content: ""; position: absolute; z-index: 4; left: 0; right: 0; top: 50%; height: 1px; margin-top: -0.5px; background: rgb(0 0 0 / 0.75); pointer-events: none; }
 .c-title .fc::before, .c-clock .fc::before { content: ""; position: absolute; z-index: 5; left: -1px; right: -1px; top: 50%; height: 3px; margin-top: -1.5px;
   background: linear-gradient(90deg, #3C3B3A 0 2px, transparent 2px calc(100% - 2px), #3C3B3A calc(100% - 2px)); pointer-events: none; }
-.fc.blank .fh > span { opacity: 0; }
+.fc { color: var(--fc, var(--flap-ink)); background: linear-gradient(var(--flap-top), var(--flap-top-2) 50%, var(--flap-bot) 50%, var(--flap-bot-2)); }
+.fc.blank, .fc.turning { color: transparent; }
 .fc { box-shadow: 0 1px 0 rgb(0 0 0 / 0.6); border-radius: 3px; }
 .fc.turning { perspective: calc(var(--ch) * 9); }
 .fc.turning .fh.ft { box-shadow: 0 2px 4px rgb(0 0 0 / 0.5); }
@@ -67,9 +68,9 @@
 .c-title { --cw: 29px; --ch: 48px; --fs: 31px; --gap: 3px; }
 .bd-clockbox { display: grid; justify-items: end; gap: 6px; }
 .c-clock { --cw: 36px; --ch: 56px; --fs: 38px; --gap: 3px; }
-.c-clock .fc:nth-child(3) .fh { background: transparent; }
+.c-clock .fc:nth-child(3), .c-clock .fc:nth-child(3) .fh { background: transparent; box-shadow: none; }
 .c-clock .fc:nth-child(3)::after, .c-clock .fc:nth-child(3)::before { display: none; }
-.c-clock .fc:nth-child(3) .fh > span { color: var(--now); }
+.c-clock .fc:nth-child(3) { --fc: var(--now); }
 .bd-clockmeta { display: inline-flex; gap: 10px; align-items: baseline; font-size: 13px; color: var(--flap-dim); font-variant-numeric: tabular-nums; }
 .bd-sec { color: var(--now); font-weight: 600; min-width: 2ch; }
 .bd-sec::before { content: ":"; opacity: 0.6; }
@@ -102,23 +103,23 @@
 a.br-link[href]:hover, a.br-link[href]:focus-visible { background: rgb(255 255 255 / 0.045); }
 a.br-link[href]:focus-visible { outline: 2px solid var(--now); outline-offset: 0; }
 .br-time { display: inline-flex; gap: 10px; flex: none; }
-.c-to .fh > span { color: var(--flap-dim); }
+.c-to { --fc: var(--flap-dim); }
 .br-tile { flex: none; width: var(--cw); height: var(--ch); border-radius: 3px; background: var(--c, #2A2A2C);
   box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.25); position: relative; transition: background 400ms var(--ease); }
 .br-tile::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgb(0 0 0 / 0.45); }
 .br.empty .br-tile { background: #202022; box-shadow: none; }
-.br.t-now .c-status .fh > span { color: #FFFFFF; text-shadow: 0 0 10px rgb(255 255 255 / 0.55); }
-.br.t-next .c-status .fh > span { color: #C9C3B7; }
-.br.t-ended .fh > span { color: var(--flap-dim); }
+.br.t-now .c-status { --fc: #FFFFFF; text-shadow: 0 0 10px rgb(255 255 255 / 0.55); }
+.br.t-next .c-status { --fc: #C9C3B7; }
+.br.t-ended { --fc: var(--flap-dim); }
 .br.t-ended .br-tile { filter: saturate(0.3) brightness(0.7); }
-.br.t-msg .c-what .fh > span, .br.t-msg .c-where .fh > span { color: #DCD6CA; }
+.br.t-msg .c-what, .br.t-msg .c-where { --fc: #DCD6CA; }
 .br-track { position: relative; flex: 1; min-width: 120px; height: 8px; border-radius: 8px; background: rgb(255 255 255 / 0.06); }
 .br-bar { position: absolute; top: 0; bottom: 0; border-radius: 8px; background: var(--c, var(--sky)); box-shadow: 0 0 12px color-mix(in srgb, var(--c, var(--sky)) 50%, transparent); }
 .br-bar.open { background: linear-gradient(90deg, var(--c, var(--sky)) 55%, transparent); border-radius: 8px 0 0 8px; }
 .br.t-ended .br-bar { opacity: 0.35; box-shadow: none; }
 .br-now { position: absolute; top: -5px; bottom: -5px; left: var(--at); width: 3px; margin-left: -1.5px; border-radius: 2px; background: #FFFFFF; box-shadow: 0 0 0 1px rgb(0 0 0 / 0.6), 0 0 10px rgb(255 255 255 / 0.9); }
 .br.empty .br-now { opacity: 0.25; }
-.br.loading .fh > span { color: #AAA69E; }
+.br.loading { --fc: #AAA69E; }
 
 /* ——— foot and the LED strip ——— */
 .bd-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; padding: 12px 0 14px; border-top: 1px solid rgb(255 255 255 / 0.06); }
@@ -174,8 +175,8 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--now); outline-offset: 0
 .board.narrow .c-to { display: none; }
 .board.narrow .br-link { flex-wrap: wrap; row-gap: 6px; padding: 6px 8px; margin: 0 -8px; }
 .board.narrow .br-track { flex-basis: 100%; height: 4px; min-width: 0; }
-.board.narrow .br.t-now .c-from .fh > span { color: var(--now); }
-.board.narrow .br.t-next .c-from .fh > span { color: #C9C3B7; }
+.board.narrow .br.t-now .c-from { --fc: var(--now); }
+.board.narrow .br.t-next .c-from { --fc: #C9C3B7; }
 .board.narrow .bd-led { margin: 0 -14px; }
 .board.narrow .ticker { border-radius: 0 0 15px 15px; }
 .board.narrow .tk-tag { padding-left: 14px; }
@@ -202,9 +203,9 @@ a.br-link[href]:focus-visible { outline: 2px solid var(--now); outline-offset: 0
 .ticket .tk-arrow { width: 22px; height: 2px; margin-bottom: 17px; background: var(--flap-dim); position: relative; }
 .ticket .tk-arrow::after { content: ""; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left: 7px solid var(--flap-dim); border-right: 0; }
 .ticket .br-tile { --cw: 22px; --ch: 36px; margin-left: auto; }
-.ticket.t-now .c-status .fh > span { color: var(--now); }
-.ticket.t-next .c-status .fh > span { color: #C9C3B7; }
-.ticket.t-ended .fh > span { color: var(--flap-dim); }
+.ticket.t-now .c-status { --fc: var(--now); }
+.ticket.t-next .c-status { --fc: #C9C3B7; }
+.ticket.t-ended { --fc: var(--flap-dim); }
 @media (max-width: 560px) { .ticket { --cw: 17px; --ch: 30px; --fs: 19px; margin: -18px -22px 16px; } .ticket .br-tile { display: none; } }
 
 /* ——— small flap counters on the paper (the overview's numbers) ——— */

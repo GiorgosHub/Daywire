@@ -21,7 +21,9 @@ function serve(port, env) {
 
 const ok = await serve(4190, { DAYWIRE_FIXTURES: "1", TFL_APP_KEY: "fixture" });
 const bad = await serve(4191, { FAIL_FEED: "1" });
-const BASE = "http://localhost:4190/";
+// The fixtures are real responses captured on 26 Oct 2026; the test clock (honoured for fixture data only) is set to
+// that evening so "in force" and "ended" mean what they meant when the responses were captured.
+const BASE = "http://localhost:4190/?now=2026-10-26T17:30:00Z";
 const browser = await chromium.launch();
 const errors = [];
 const watch = (p) => { p.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); }); p.on("pageerror", (e) => errors.push(e.message)); };

@@ -60,13 +60,11 @@ export function installPointerFx(): void {
     raf = requestAnimationFrame(() => {
       raf = 0;
       const t = ev!.target as Element | null;
-      // light that follows the pointer across cards and panels
-      const lit = t?.closest?.(".card, .panel-lit") as HTMLElement | null;
-      if (lit) { const r = lit.getBoundingClientRect(); lit.style.setProperty("--mx", `${ev!.clientX - r.left}px`); lit.style.setProperty("--my", `${ev!.clientY - r.top}px`); }
       if (reducedMotion()) return;
       const b = t?.closest?.(".magnet") as HTMLElement | null;
       if (b !== held) release();
       if (!b) return;
+      // (the pointer light that used to follow cards is gone: it read layout and repainted a card on every move)
       held = b;
       const r = b.getBoundingClientRect();
       const x = (ev!.clientX - (r.left + r.width / 2)) * 0.2, y = (ev!.clientY - (r.top + r.height / 2)) * 0.3;

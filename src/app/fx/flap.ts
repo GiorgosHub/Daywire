@@ -1,38 +1,56 @@
-// Split-flap cells, as on a station departure board. Each cell has four halves:
+// Split-flap cells, as on a station departure board.
+// At rest a cell is ONE element: a two-tone plate (top half lighter, bottom darker, a hinge line) with its character
+// as plain text. Only while it turns does it get four halves:
 //   t  (static top)    shows the NEXT character's top, revealed as the flap above it falls
 //   b  (static bottom) shows the CURRENT character's bottom, covered as the new flap lands
 //   ft (falling top)   the CURRENT character's top, turning 0° → -90° about its bottom edge
 //   fb (landing bottom) the NEXT character's bottom, turning 90° → 0° about its top edge
-// Changing a cell turns it through the characters between the old and the new one, as real boards do (at most a
-// handful, so a change reads in well under a second). One frame loop drives every moving cell; at rest nothing runs.
-// Reduced motion: characters are set directly. Flap text is decoration for sighted readers (aria-hidden): every
-// board row carries its full text as an accessible name.
+// The halves are removed when it lands, so a board of ~400 cells is ~400 elements, not ~3,600, and only the cells
+// that are moving cost anything. Changing a cell turns it through the characters between the old and the new one, as
+// real boards do (at most a handful). One frame loop drives every moving cell and stops when none move; it writes
+// transforms only (no filters, no layout). Reduced motion: characters are set directly. Flap text is decoration for
+// sighted readers (aria-hidden): every board row carries its full text as an accessible name.
 import { frame, reducedMotion } from "./loop.ts";
 
 const ORDER = " ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:.,-/+·'&()%";
-const STEP_MS = 64;        // one character's turn (two halves)
-const MAX_STEPS = 7;       // characters shown on the way to the target
+const STEP_MS = 70;        // one character's turn (two halves)
+const MAX_STEPS = 6;       // characters shown on the way to the target
 
-interface Cell { el: HTMLElement; t: HTMLElement; b: HTMLElement; ft: HTMLElement; fb: HTMLElement; cur: string; queue: string[]; start: number; from: string }
+interface Halves { t: Text; b: Text; ft: HTMLElement; ftx: Text; fb: HTMLElement; fbx: Text; wrap: HTMLElement[] }
+interface Cell { el: HTMLElement; txt: Text; cur: string; queue: string[]; start: number; from: string; h: Halves | null; begun: string }
 
 const moving = new Set<Cell>();
 let stop: (() => void) | null = null;
-
-function half(cls: string): [HTMLElement, HTMLElement] {
-  const o = document.createElement("span"); o.className = `fh ${cls}`;
-  const i = document.createElement("span"); o.append(i);
-  return [o, i];
-}
 
 /** Upper-case for a board: Greek capitals carry no accents (Η ΜΕΡΑ, not Η ΜΈΡΑ). */
 export function boardCase(s: string, lang = "el"): string {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleUpperCase(lang).replace(/\s+/g, " ").trim();
 }
 
+function half(cls: string): [HTMLElement, Text] {
+  const o = document.createElement("span"); o.className = `fh ${cls}`;
+  const i = document.createElement("span"); const t = document.createTextNode(""); i.append(t); o.append(i);
+  return [o, t];
+}
+
 function setChar(c: Cell, ch: string): void {
-  for (const x of [c.t, c.b, c.ft, c.fb]) x.firstChild!.textContent = ch;
+  c.txt.data = ch;
   c.cur = ch;
   c.el.classList.toggle("blank", ch === " ");
+}
+
+function attach(c: Cell): Halves {
+  const [t, tt] = half("t"), [b, bt] = half("b"), [ft, ftx] = half("ft"), [fb, fbx] = half("fb");
+  c.el.append(t, b, ft, fb);
+  c.el.classList.add("turning");
+  return { t: tt, b: bt, ft, ftx, fb, fbx, wrap: [t, b, ft, fb] };
+}
+
+function detach(c: Cell): void {
+  if (!c.h) return;
+  for (const x of c.h.wrap) x.remove();
+  c.h = null;
+  c.el.classList.remove("turning");
 }
 
 function path(from: string, to: string): string[] {
@@ -50,33 +68,29 @@ function path(from: string, to: string): string[] {
 function tick(now: number): void {
   for (const c of moving) {
     if (now < c.start) continue;
+    const h = c.h ?? (c.h = attach(c));
     const next = c.queue[0]!;
     const k = (now - c.start) / STEP_MS;
-    if (c.ft.dataset.from !== c.from) {
+    if (c.begun !== c.from + next) {
       // begin a turn: the falling flap still shows what was there, the halves behind show what comes
-      c.ft.dataset.from = c.from;
-      c.ft.firstChild!.textContent = c.from;
-      c.b.firstChild!.textContent = c.from;
-      c.t.firstChild!.textContent = next;
-      c.fb.firstChild!.textContent = next;
+      c.begun = c.from + next;
+      h.ftx.data = c.from; h.b.data = c.from; h.t.data = next; h.fbx.data = next;
+      h.fb.style.transform = "rotateX(90deg)";
     }
     if (k < 0.5) {
-      c.ft.style.transform = `rotateX(${-180 * k}deg)`;
-      c.ft.style.filter = `brightness(${1 - k * 0.9})`;
-      c.fb.style.transform = "rotateX(90deg)";
+      h.ft.style.transform = `rotateX(${(-180 * k).toFixed(1)}deg)`;
     } else if (k < 1) {
-      c.ft.style.transform = "rotateX(-90deg)";
-      c.fb.style.transform = `rotateX(${90 - 180 * (k - 0.5)}deg)`;
-      c.fb.style.filter = `brightness(${0.55 + (k - 0.5) * 0.9})`;
+      h.ft.style.transform = "rotateX(-90deg)";
+      h.fb.style.transform = `rotateX(${(90 - 180 * (k - 0.5)).toFixed(1)}deg)`;
     } else {
       c.queue.shift();
       c.from = next;
       c.start = now;
+      h.ft.style.transform = "";
       if (!c.queue.length) {
         setChar(c, next);
-        c.ft.style.transform = ""; c.fb.style.transform = ""; c.ft.style.filter = ""; c.fb.style.filter = "";
-        delete c.ft.dataset.from;
-        c.el.classList.remove("turning");
+        detach(c);
+        c.begun = "";
         moving.delete(c);
       }
     }
@@ -85,12 +99,11 @@ function tick(now: number): void {
 }
 
 function animate(c: Cell, to: string, delay: number): void {
-  if (reducedMotion() || !c.el.isConnected) { moving.delete(c); c.queue = []; setChar(c, to); return; }
+  if (reducedMotion() || !c.el.isConnected) { moving.delete(c); c.queue = []; detach(c); setChar(c, to); return; }
   const from = moving.has(c) ? c.queue[0] ?? c.cur : c.cur;
   c.queue = path(from, to);
   c.from = from;
   c.start = performance.now() + delay;
-  c.el.classList.add("turning");
   moving.add(c);
   if (!stop) stop = frame((t) => tick(t));
 }
@@ -105,11 +118,8 @@ export class FlapText {
     this.el.setAttribute("aria-hidden", "true");
     for (let i = 0; i < width; i++) {
       const el = document.createElement("span"); el.className = "fc blank";
-      const [t] = half("t"), [b] = half("b"), [ft] = half("ft"), [fb] = half("fb");
-      el.append(t, b, ft, fb);
-      const c: Cell = { el, t, b, ft, fb, cur: " ", queue: [], start: 0, from: " " };
-      for (const x of [t, b, ft, fb]) x.firstChild!.textContent = " ";
-      this.cells.push(c);
+      const txt = document.createTextNode(" "); el.append(txt);
+      this.cells.push({ el, txt, cur: " ", queue: [], start: 0, from: " ", h: null, begun: "" });
       this.el.append(el);
     }
   }
@@ -118,15 +128,17 @@ export class FlapText {
     let s = text.length > this.width ? text.slice(0, this.width - 1).trimEnd() + "…" : text;
     const pad = this.width - s.length;
     s = align === "right" ? " ".repeat(pad) + s : align === "center" ? " ".repeat(pad >> 1) + s + " ".repeat(pad - (pad >> 1)) : s + " ".repeat(pad);
+    let k = 0;
     this.cells.forEach((c, i) => {
       const ch = s[i] ?? " ";
       const target = moving.has(c) ? c.queue[c.queue.length - 1] : c.cur;
       if (ch === target) return;
-      if (!anim) { moving.delete(c); c.queue = []; setChar(c, ch); return; }
-      animate(c, ch, delay + i * stagger);
+      if (!anim) { moving.delete(c); c.queue = []; detach(c); setChar(c, ch); return; }
+      // stagger by the cells that actually change, so a short change doesn't wait for the cells before it
+      animate(c, ch, delay + (k++) * stagger);
     });
   }
-  /** Spin every cell through random characters (a board fetching new data). */
+  /** Spin some cells through random characters (a board fetching new data). */
   scramble(on: boolean): void {
     this.el.classList.toggle("scrambling", on && !reducedMotion());
     if (!on || reducedMotion()) return;

@@ -9,8 +9,9 @@ import { rows } from "./domain/view.ts";
 import { clear, h, icon } from "./app/dom.ts";
 import { reducedMotion } from "./app/fx/loop.ts";
 import { FlapText } from "./app/fx/flap.ts";
+import { installGlide } from "./app/fx/glide.ts";
 import { installPointerFx } from "./app/fx/motion.ts";
-import { M, setLang, tx } from "./app/i18n/index.ts";
+import { getLang, M, setLang, tx } from "./app/i18n/index.ts";
 import { lastFeed, rememberFeed, save } from "./app/prefs.ts";
 import { failedSources, now, onRender, onSwitch, prefsHere, S, savedEntry } from "./app/state.ts";
 import { openDetail } from "./app/views/detail.ts";
@@ -107,21 +108,28 @@ function keepFocus<T>(fn: () => T): T {
   return out;
 }
 
+const keys = { bar: "", compact: "", foot: "" };
 function render(): void {
   keepFocus(() => {
     const route = location.hash.replace(/^#/, "") || "/";
     const t0 = now();
     const all = S.feed && S.feed.location.id === S.current?.id ? rows(S.feed.notices, prefsHere(), t0, failedSources()) : [];
-    clear(bar); bar.append(...barContent());
-    clear(heroSlot); heroSlot.append(hero(all, t0));
-    clear(compact); compact.append(...compactContent());
+    // only what changed is rebuilt: the bar, the compact bar and the footer have keys; the hero updates in place
+    const entry = savedEntry();
+    const bk = JSON.stringify([S.current?.id, getLang(), S.prefs.savedNotices.length, entry?.placeIds.length, entry?.terms.length, Boolean(S.feed)]);
+    if (bk !== keys.bar) { keys.bar = bk; clear(bar); bar.append(...barContent()); }
+    const heroEl = hero(all, t0);
+    if (heroSlot.firstChild !== heroEl) heroSlot.replaceChildren(heroEl);
+    const ck = JSON.stringify([S.current?.id, getLang()]);
+    if (ck !== keys.compact) { keys.compact = ck; clear(compact); compact.append(...compactContent()); }
     clear(mainEl);
     mainEl.append(...banners());
     const onSources = route.startsWith("/sources");
     if (onSources) mainEl.append(sourcesPage());
     else mainEl.append(feedBody(all, t0));
     clear(railSlot); rail = onSources ? null : railFor(mainEl); if (rail) railSlot.append(rail); railReset();
-    clear(footSlot); footSlot.append(footer());
+    const fk = JSON.stringify([getLang(), S.feed?.location.id, S.feed?.sources.map((x) => x.state)]);
+    if (fk !== keys.foot) { keys.foot = fk; clear(footSlot); footSlot.append(footer()); }
     feedField(S.feed, all, t0);
     measure();
     document.title = route.startsWith("/sources") ? `${M().sourcesTitle} · DAYWIRE` : S.current ? `${tx(S.current.name)} · DAYWIRE` : "DAYWIRE";
@@ -245,6 +253,7 @@ function installShell(): void {
   mountStage(stage);
   startClocks();
   installPointerFx();
+  installGlide();
   addEventListener("scroll", onScroll, { passive: true });
   let narrow = innerWidth < 760;
   addEventListener("resize", () => { measure(); if ((innerWidth < 760) !== narrow) { narrow = !narrow; render(); } });
